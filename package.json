@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "discord.js": "^14.22.1",
+    "dotenv": "^17.2.2",
+    "js-discord-modularcommand": "^2.5.2",
+    "keyv": "^5.5.2",
+    "keyv-file": "^5.2.0",
+    "node-cache": "^5.1.2",
+    "vrchat": "^2.20.3"
+  },
+  "scripts": {
+    "login": "node login.js",
+    "start": "node bot.js",
+    "deploy-commands": "node bot-cmds.js"
+  },
+  "type": "commonjs"
+}
