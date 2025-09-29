@@ -1,7 +1,21 @@
+/**
+ * Profile management module.
+ * Handles user verification, banning, and data retrieval.
+ * @author vicentefelipechile
+ * @license MIT
+ */
+
+// =================================================================================================
+// Imports
+// =================================================================================================
+
 const { D1_URL, D1_PRIVATE_KEY } = require('./env');
 const { VRCHAT_CLIENT } = require('./vrchat');
 const NodeCache = require('node-cache');
 
+// =================================================================================================
+// Variables
+// =================================================================================================
 
 const D1_ENDPOINT = D1_URL;
 const D1_HEADERS = {
@@ -10,6 +24,10 @@ const D1_HEADERS = {
 }
 
 const CACHE_DATA = new NodeCache({ stdTTL: 60 * 60 });  // Cache for 1 hour
+
+// =================================================================================================
+// User Data Functions
+// =================================================================================================
 
 /**
  * Get user data by ID.
@@ -28,8 +46,11 @@ async function GetUserData(Id) {
 
   const data = await response.json();
   if (response.status !== 200) {
-    return { status: false, data: null };
+    return { success: false, data: null };
   }
+
+  data.data.is_banned = data.data.is_banned === 1;
+  data.data.is_verified = data.data.is_verified === 1;
 
   CACHE_DATA.set(Id, data);
 
@@ -43,8 +64,29 @@ async function GetUserData(Id) {
  */
 async function UserExists(discordId) {
   const response = await GetUserData(discordId);
-  return response.status === 200 && response.data !== null;
+  return response.success === true && response.data !== null;
 }
+
+/**
+ * Delete user data.
+ * @param {string} discordId - The Discord ID of the user.
+ * @returns {Promise<boolean>} - True if the user was successfully deleted, false otherwise.
+ */
+async function DeleteUserData(discordId) {
+  const response = await fetch(`${D1_ENDPOINT}/${discordId}`, {
+    method: 'DELETE',
+    headers: D1_HEADERS,
+  });
+  if (response.status === 200) {
+    CACHE_DATA.del(discordId);
+    return true;
+  }
+  return false;
+}
+
+// =================================================================================================
+// User Status Functions
+// =================================================================================================
 
 /**
  * Check if a user is banned.
@@ -54,8 +96,7 @@ async function UserExists(discordId) {
 async function IsUserBanned(discordId) {
   const response = await GetUserData(discordId);
   return (
-    response.status === 200 &&
-    response.data !== null &&
+    response.success === true &&
     response.data.is_banned === true
   );
 }
@@ -68,10 +109,8 @@ async function IsUserBanned(discordId) {
 
 async function IsUserVerified(discordId) {
   const response = await GetUserData(discordId);
-
   return (
-    response.status === 200 &&
-    response.data !== null &&
+    response.success === true &&
     response.data.is_verified === true
   );
 }
@@ -84,7 +123,7 @@ async function IsUserVerified(discordId) {
  * @param {string} vrchatName - The VRChat name of the user.
  * @returns {Promise<boolean>} - True if the user was successfully verified, false otherwise.
  */
-async function VerifyUser(discordId, vrchatId, vrchatName) {
+async function VerifyUser(discordId, vrchatId = null, vrchatName = null) {
   const isVerified = await IsUserVerified(discordId);
   if (isVerified) throw new Error('User is already verified.');
 
@@ -95,7 +134,7 @@ async function VerifyUser(discordId, vrchatId, vrchatName) {
     method: 'PUT',
     headers: D1_HEADERS,
     body: JSON.stringify({
-      discord_id: discordId,
+      is_verified: true,
       vrchat_id: vrchatId,
       vrchat_name: vrchatName,
     }),
@@ -115,7 +154,7 @@ async function UnverifyUser(discordId) {
   if (!isVerified) throw new Error('User is not verified.');
 
   const data = await GetUserData(discordId);
-  if (data.status !== 200 || data.data === null) {
+  if (data.success !== true || data.data === null) {
     throw new Error('Failed to fetch user data.');
   }
 
@@ -123,7 +162,7 @@ async function UnverifyUser(discordId) {
     method: 'PUT',
     headers: D1_HEADERS,
     body: JSON.stringify({
-      is_banned: true
+      is_verified: false,
     }),
   });
 
@@ -149,7 +188,7 @@ async function GetUserByDiscord(discordId) {
   });
 
   if (result.status !== 200) {
-    return { status: false, data: null };
+    return { success: false, data: null };
   }
 
   const response = await result.json();
@@ -214,8 +253,13 @@ function GenerateCodeByVRChat(vrchatId) {
   return code;
 }
 
+// =================================================================================================
+// Exports
+// =================================================================================================
+
 module.exports = {
   GetUserData,
+  DeleteUserData,
   UserExists,
   IsUserBanned,
   IsUserVerified,

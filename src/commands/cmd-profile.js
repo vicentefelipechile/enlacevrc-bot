@@ -1,15 +1,31 @@
-const { Locale, EmbedBuilder, ApplicationCommandOptionType, Colors } = require("discord.js");
+/**
+ * @file        cmd-profile.js
+ * @author      vicentefelipechile
+ * @license     MIT
+ * @description Command to display a user's VRChat profile if they are verified.
+ */
+
+// =================================================================================================
+// Imports
+// =================================================================================================
+
+const { Locale, EmbedBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const { GetUserByDiscord, UserExists, GenerateCodeByVRChat } = require("../profile");
 const { GetUserById } = require("../vrchat");
 const GetRandomColor = require("../randomcolor");
 
+// =================================================================================================
+// Variables
+// =================================================================================================
 
 const profileCommand = new ModularCommand('profile')
+    .setDescription('Display your profile information.')
+    .setCooldown(15)
 
-profileCommand.setDescription('Display your profile information.')
-
-profileCommand.setCooldown(15)
+// =================================================================================================
+// Localization
+// =================================================================================================
 
 profileCommand.setLocalizationDescription({
     [Locale.EnglishUS]: 'Display your profile information.',
@@ -70,6 +86,10 @@ profileCommand.setLocalizationOptions({
     }
 })
 
+// =================================================================================================
+// Custom Execution Logic
+// =================================================================================================
+
 // 16 Personalities
 const PERSONALITY_URL = 'https://www.16personalities.com/es/personalidad-';
 const PERSONALITY_TYPES = [
@@ -91,6 +111,10 @@ function FormatP16(description) {
   return formattedDescription;
 };
 
+// =================================================================================================
+// Profile Embed Formatting
+// =================================================================================================
+
 function FormatProfileEmbed(vrchatUser, locale) {
   // const ageVerified = locale['embed.age_verification.' + (vrchatUser.ageVerified ? 'verified' : 'not_verified')];
 
@@ -110,6 +134,10 @@ function FormatProfileEmbed(vrchatUser, locale) {
     .setFooter({ text: `ID: ${vrchatUser.id}` })
     .setTimestamp(new Date(vrchatUser.date_joined));
 }
+
+// =================================================================================================
+// Command Execution
+// =================================================================================================
 
 profileCommand.setExecute(async ({ interaction, locale, args, command }) => {
     await interaction.deferReply();
@@ -135,5 +163,9 @@ profileCommand.setExecute(async ({ interaction, locale, args, command }) => {
         await interaction.editReply({ embeds: [profileEmbed] });
     }
 });
+
+// =================================================================================================
+// Exports
+// =================================================================================================
 
 module.exports = RegisterCommand([profileCommand]);
