@@ -9,9 +9,9 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ApplicationCommandOptionType, MessageFlags, Colors, ChannelType, ApplicationCommandType, AttachmentBuilder } = require("discord.js");
+const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ApplicationCommandOptionType, MessageFlags, Colors, AttachmentBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
-const { IsUserVerified, IsUserBanned, GenerateCodeByVRChat, VerifyUser, GetUserData, UnverifyUser, GetVRChatId } = require("../profile");
+const { IsUserBanned, GenerateCodeByVRChat, VerifyUser, UnverifyUser, GetVRChatId, UserExists } = require("../profile");
 const { GetUserById } = require("../vrchat");
 const NodeCache = require("node-cache");
 
@@ -30,7 +30,7 @@ verificationCommand.addOption({
     required: false,
 })
 
-const commandVerifyImg = new AttachmentBuilder('img/verify-command.png', { name: 'verify-command.png' });
+const commandVerifyVideo = new AttachmentBuilder('img/verify.webm', { name: 'verify.webm' });
 
 const VRCHAT_URL = 'https://vrchat.com/home';
 const VRCHAT_CODE_VERIFY_DATA = new NodeCache({ stdTTL: 5 * 60 });
@@ -57,6 +57,7 @@ verificationCommand.setLocalizationPhrases({
     [Locale.EnglishUS]: {
         'error.already_verified': 'You are already verified.',
         'error.banned': 'You are banned and cannot be verified.',
+        'error.banned_unverify': 'You are banned and cannot unverify your account.',
         'error.generic': 'An unexpected error occurred. Please try again later.',
         'error.timeout': 'Verification timed out. Please run the command again.',
         'error.code_not_found': 'The verification code was not found in your VRChat bio. Please make sure you have added it correctly and press the button again.',
@@ -83,6 +84,7 @@ verificationCommand.setLocalizationPhrases({
     [Locale.SpanishLATAM]: {
         'error.already_verified': 'Ya te encuentras verificado.',
         'error.banned': 'Estás baneado y no puedes verificarte.',
+        'error.banned_unverify': 'Estás baneado y no puedes desverificar tu cuenta.',
         'error.vrchat_not_found': 'No se pudo encontrar un usuario en VRChat con el nombre `{username}`. Por favor, revisa que esté bien escrito.',
         'error.generic': 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo más tarde.',
         'error.timeout': 'La verificación ha expirado. Por favor, ejecuta el comando de nuevo.',
@@ -174,6 +176,15 @@ const buttonUnverify = verificationCommand.addButton('unverify', async ({ intera
     await interaction.deferUpdate();
     const discordId = interaction.user.id;
 
+    const isBanned = await IsUserBanned(discordId);
+    if (isBanned) {
+        return interaction.editReply({
+            content: locale['error.banned_unverify'],
+            embeds: [],
+            components: [],
+        });
+    }
+
     try {
         await UnverifyUser(discordId);
 
@@ -219,14 +230,13 @@ const buttonVerifyProfile = verificationCommand.addButton('profile', async ({ in
     const embed = new EmbedBuilder()
         .setColor(Colors.Yellow)
         .setTitle(locale['verify.title'])
-        .setDescription(locale['verify.description'])
-        .setImage(`attachment://${commandVerifyImg.name}`);
+        .setDescription(locale['verify.description']);
 
     await interaction.editReply({
         content: '',
         embeds: [embed],
         components: [],
-        files: [commandVerifyImg],
+        files: [commandVerifyVideo],
     });
 });
 
@@ -242,7 +252,7 @@ verificationCommand.setExecute(async ({ interaction, locale, args }) => {
 
     const discordId = interaction.user.id;
 
-    if (await IsUserVerified(discordId)) {
+    if (await UserExists(discordId)) {
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
             .setTitle(locale['embed.title'])
@@ -263,18 +273,18 @@ verificationCommand.setExecute(async ({ interaction, locale, args }) => {
         const embed = new EmbedBuilder()
             .setColor(Colors.Yellow)
             .setTitle(locale['verify.title'])
-            .setDescription(locale['verify.description'])
-            .setImage(`attachment://${commandVerifyImg.name}`);
+            .setDescription(locale['verify.description']);
 
         await interaction.editReply({
             content: '',
             embeds: [embed],
             components: [],
-            files: [commandVerifyImg],
+            files: [commandVerifyVideo],
         });
+
         return;
     }
-    
+
     if (await IsUserBanned(discordId)) {
         return interaction.editReply(locale['error.banned']);
     }

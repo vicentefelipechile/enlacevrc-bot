@@ -111,7 +111,21 @@ async function IsUserVerified(discordId) {
   const response = await GetUserData(discordId);
   return (
     response.success === true &&
-    response.data.is_verified === true
+    response.data !== null
+  );
+}
+
+/**
+ * Check if a user is verified as 18+.
+ * @param {string} discordId - The Discord ID of the user.
+ * @returns {Promise<boolean>} - True if the user is verified as 18+, false otherwise.
+ */
+async function IsUserVerified18Plus(discordId) {
+  const response = await GetUserData(discordId);
+  return (
+    response.success === true &&
+    response.data.is_verified === true &&
+    response.data.verified_at !== null
   );
 }
 
@@ -143,6 +157,30 @@ async function VerifyUser(discordId, vrchatId, vrchatName) {
   return result.status === 201;
 }
 
+/**
+ * Verify a user as 18+.
+ * @param {string} discordId - The Discord ID of the user.
+ * @returns {Promise<boolean>} - True if the user was successfully verified as 18+, false otherwise.
+ */
+async function VerifyUser18Plus(discordId) {
+  const data = await GetUserData(discordId);
+  if (data.success !== true || data.data === null) {
+    throw new Error('Failed to fetch user data.');
+  }
+
+  const result = await fetch(`${D1_ENDPOINT}/${discordId}`, {
+    method: 'PUT',
+    headers: D1_HEADERS,
+    body: JSON.stringify({
+      is_verified: true,
+    }),
+  });
+
+  CACHE_DATA.del(discordId);
+
+  return result.status === 200;
+}
+
 
 /**
  * Unverify a user.
@@ -150,9 +188,6 @@ async function VerifyUser(discordId, vrchatId, vrchatName) {
  * @returns {Promise<boolean>} - True if the user was successfully unverified, false otherwise.
  */
 async function UnverifyUser(discordId) {
-  const isVerified = await IsUserVerified(discordId);
-  if (!isVerified) throw new Error('User is not verified.');
-
   const data = await GetUserData(discordId);
   if (data.success !== true || data.data === null) {
     throw new Error('Failed to fetch user data.');
@@ -163,9 +198,34 @@ async function UnverifyUser(discordId) {
     headers: D1_HEADERS,
   });
 
+  CACHE_DATA.del(discordId);
+
   return result.status === 200;
 }
 
+/**
+ * Unverify a user as 18+.
+ * @param {string} discordId - The Discord ID of the user.
+ * @returns {Promise<boolean>} - True if the user was successfully unverified as 18+, false otherwise.
+ */
+async function UnverifyUser18Plus(discordId) {
+  const data = await GetUserData(discordId);
+  if (data.success !== true || data.data === null) {
+    throw new Error('Failed to fetch user data.');
+  }
+
+  const result = await fetch(`${D1_ENDPOINT}/${discordId}`, {
+    method: 'PUT',
+    headers: D1_HEADERS,
+    body: JSON.stringify({
+      is_verified: false,
+    }),
+  });
+
+  CACHE_DATA.del(discordId);
+
+  return result.status === 200;
+}
 
 /**
  * Get a user by their Discord ID.
@@ -272,6 +332,8 @@ module.exports = {
   IsUserVerified,
   VerifyUser,
   UnverifyUser,
+  VerifyUser18Plus,
+  UnverifyUser18Plus,
   GetUserByDiscord,
   GetUserByVRChat,
   UpdateName,
