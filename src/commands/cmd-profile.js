@@ -9,7 +9,7 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder } = require("discord.js");
+const { Locale, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ApplicationCommandOptionType } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const { GetUserByDiscord, UserExists, GenerateCodeByVRChat } = require("../profile");
 const { GetUserById } = require("../vrchat");
@@ -21,7 +21,14 @@ const GetRandomColor = require("../randomcolor");
 
 const profileCommand = new ModularCommand('profile')
     .setDescription('Display your profile information.')
-    .setCooldown(15)
+    .setCooldown(15);
+
+profileCommand.addOption({
+    name: 'usuario',
+    description: 'User',
+    type: ApplicationCommandOptionType.User,
+    required: false,
+});
 
 // =================================================================================================
 // Localization
@@ -36,7 +43,7 @@ profileCommand.setLocalizationPhrases({
     [Locale.EnglishUS]: {
         'title': 'VRChat Profile',
         'description': 'Displays your VRChat profile if you are verified.',
-        'error.not_verified': 'You are not verified. Please use the `{command}` command to link your VRChat account.',
+        'error.not_verified': 'You are not verified. Please use the `/{command}` command to link your VRChat account or press the button below to start the verification process.',
         'error.not_verified_user': 'This user is not verified. Make sure they have linked their VRChat account using the `{command}` command.',
         'error.not_found': 'Could not find your VRChat profile. It may have been deleted or there is an issue with the VRChat API.',
         'error.not_found_user': 'Could not find the specified VRChat profile. It may have been deleted or there is an issue with the VRChat API.',
@@ -53,11 +60,12 @@ profileCommand.setLocalizationPhrases({
         'embed.age_verification.not_verified': 'Not Verified',
         'embed.verification_code_detected': 'I noticed that you still have the code {code} in your VRChat bio. Once you are verified, it is not necessary to keep it.',
         'embed.verification_code_detected.target': 'I noticed that {target} still has the code {code} in their VRChat bio. Someone should let them know to remove it since it is not necessary to keep it once verified.',
+        'button.verify': 'Verify',
     },
     [Locale.SpanishLATAM]: {
         'title': 'Perfil de VRChat',
         'description': 'Muestra tu perfil de VRChat si estás verificado.',
-        'error.not_verified': 'No estás verificado. Por favor, usa el comando `{command}` para vincular tu cuenta de VRChat.',
+        'error.not_verified': 'No estás verificado. Por favor, usa el comando `/{command}` para vincular tu cuenta de VRChat o presiona el botón de abajo para iniciar el proceso de verificación.',
         'error.not_verified_user': 'Este usuario no está verificado. Asegúrate de que haya vinculado su cuenta de VRChat usando el comando `{command}`.',
         'error.not_found': 'No se pudo encontrar tu perfil de VRChat. Puede que haya sido eliminado o que haya un problema con la API de VRChat.',
         'error.not_found_user': 'No se pudo encontrar el perfil de VRChat especificado. Puede que haya sido eliminado o que haya un problema con la API de VRChat.',
@@ -74,6 +82,7 @@ profileCommand.setLocalizationPhrases({
         'embed.age_verification.not_verified': 'No Verificado',
         'embed.verification_code_detected': 'He notado que aún tienes el código {code} en tu biografía de VRChat. Una vez verificado no hace falta mantenerlo.',
         'embed.verification_code_detected.target': 'He notado que {target} aún tiene el código {code} en su biografía de VRChat. Que alguien le avise que lo elimine ya que una vez verificado no hace falta mantenerlo-',
+        'button.verify': 'Verificar',
     }
 });
 
@@ -141,12 +150,31 @@ function FormatProfileEmbed(vrchatUser, locale) {
 
 profileCommand.setExecute(async ({ interaction, locale, args, command }) => {
     await interaction.deferReply();
+    const isTargetingAUser = args['usuario'] && args['usuario'].id !== interaction.user.id;
+    const targetId = isTargetingAUser ? args['usuario'].id : interaction.user.id;
 
-    if (!UserExists(interaction.user.id)) {
-        return await interaction.reply(locale['error.not_verified'].replace('{command}', command.name));
+    if (isTargetingAUser && !interaction.member.permissions.has('ModerateMembers')) {
+        return await interaction.editReply({
+            content: locale['error.not_allowed'],
+            embeds: []
+        });
     }
 
-    const userData = await GetUserByDiscord(interaction.user.id);
+    const userExists = await UserExists(targetId);
+
+    if (!userExists) {
+        const verificationButton = new ButtonBuilder()
+            .setLabel(locale['button.verify'])
+            .setStyle(ButtonStyle.Primary)
+            .setCustomId('verification_profile');
+        
+        return await interaction.editReply({
+            content: locale['error.not_verified'].replace('{command}', command.name),
+            components: [new ActionRowBuilder().addComponents(verificationButton)],
+        });
+    }
+
+    const userData = await GetUserByDiscord(targetId);
     const vrchatUser = await GetUserById(userData.vrchat_id);
 
     const profileEmbed = FormatProfileEmbed(vrchatUser, locale);
@@ -156,7 +184,7 @@ profileCommand.setExecute(async ({ interaction, locale, args, command }) => {
         await interaction.editReply({
         content: locale[`embed.verification_code_detected${isTargetingAUser ? '.target' : ''}`]
             .replace('{code}', code)
-            .replace('{target}', isTargetingAUser ? `<@${args['usuario'].id}>` : 'tu'),
+            .replace('{target}', isTargetingAUser ? `<@${targetId}>` : 'tu'),
         embeds: [profileEmbed],
         });
     } else {
