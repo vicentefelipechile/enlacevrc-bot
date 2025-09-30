@@ -123,7 +123,7 @@ async function IsUserVerified(discordId) {
  * @param {string} vrchatName - The VRChat name of the user.
  * @returns {Promise<boolean>} - True if the user was successfully verified, false otherwise.
  */
-async function VerifyUser(discordId, vrchatId = null, vrchatName = null) {
+async function VerifyUser(discordId, vrchatId, vrchatName) {
   const isVerified = await IsUserVerified(discordId);
   if (isVerified) throw new Error('User is already verified.');
 
@@ -131,16 +131,16 @@ async function VerifyUser(discordId, vrchatId = null, vrchatName = null) {
   if (isBanned) throw new Error('User is banned.');
 
   const result = await fetch(D1_ENDPOINT, {
-    method: 'PUT',
+    method: 'POST',
     headers: D1_HEADERS,
     body: JSON.stringify({
-      is_verified: true,
       vrchat_id: vrchatId,
+      discord_id: discordId,
       vrchat_name: vrchatName,
     }),
   });
 
-  return result.status === 200;
+  return result.status === 201;
 }
 
 
@@ -159,11 +159,8 @@ async function UnverifyUser(discordId) {
   }
 
   const result = await fetch(`${D1_ENDPOINT}/${discordId}`, {
-    method: 'PUT',
+    method: 'DELETE',
     headers: D1_HEADERS,
-    body: JSON.stringify({
-      is_verified: false,
-    }),
   });
 
   return result.status === 200;
@@ -253,6 +250,16 @@ function GenerateCodeByVRChat(vrchatId) {
   return code;
 }
 
+const RegexURL = new RegExp(/^(?:https?:\/\/)?(?:www\.)?vrchat\.com\/home\/user\/(usr_[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/);
+const RegexID = new RegExp(/^(usr_[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/);
+
+function GetVRChatId(code) {
+  const match = code.match(RegexURL);
+  if (match && match[1]) return match[1];
+  if (RegexID.test(code)) return code;
+  return null;
+}
+
 // =================================================================================================
 // Exports
 // =================================================================================================
@@ -269,4 +276,5 @@ module.exports = {
   GetUserByVRChat,
   UpdateName,
   GenerateCodeByVRChat,
+  GetVRChatId,
 };
