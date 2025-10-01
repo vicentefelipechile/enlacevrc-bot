@@ -9,11 +9,10 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ApplicationCommandOptionType, MessageFlags, Colors, AttachmentBuilder } = require("discord.js");
+const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, Colors, AttachmentBuilder, ApplicationCommandOptionType } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
-const { IsUserBanned, GenerateCodeByVRChat, VerifyUser, UnverifyUser, GetVRChatId, UserExists } = require("../profile");
-const { GetUserById } = require("../vrchat");
 const NodeCache = require("node-cache");
+const Profile = require("../models/profile");
 
 // =================================================================================================
 // Variables
@@ -25,8 +24,8 @@ const verificationCommand = new ModularCommand('verification')
 
 verificationCommand.addOption({
     name: 'vrchat',
-    description: 'Your VRChat username.',
     type: ApplicationCommandOptionType.String,
+    description: 'Your VRChat profile URL.',
     required: false,
 })
 
@@ -129,16 +128,16 @@ const buttonVerify = verificationCommand.addButton('verify', async ({ interactio
         });
     }
 
-    const { vrchat_id } = cachedData;
-    const verificationCode = GenerateCodeByVRChat(vrchat_id);
+    const { vrchat_id: vrchatId } = cachedData;
+    const partialProfile = await Profile.create(vrchatId);
+    const code = Profile.generateCodeByVRChat(vrchatId);
 
     try {
-        // Re-obtener el perfil actualizado del usuario de VRChat
-        const profileData = await GetUserById(vrchat_id);
+        const vrchatData = partialProfile.getVRChatData();
 
-        if (profileData.bio && profileData.bio.includes(verificationCode)) {
-            const success = await VerifyUser(discordId, vrchat_id, profileData.displayName);
-            if (!success) {
+        if (vrchatData.bio && vrchatData.bio.includes(code)) {
+            const profile = await Profile.createUserWithAutoName(vrchatId, discordId);
+            if (!profile) {
                 throw new Error('Failed to verify user in the database.');
             }
 
@@ -174,9 +173,9 @@ buttonVerify.getButton().setStyle(ButtonStyle.Success).setEmoji('✅');
 
 const buttonUnverify = verificationCommand.addButton('unverify', async ({ interaction, locale }) => {
     await interaction.deferUpdate();
-    const discordId = interaction.user.id;
+    const profile = await Profile.create(interaction.user.id);
+    const isBanned = await profile.isBanned();
 
-    const isBanned = await IsUserBanned(discordId);
     if (isBanned) {
         return interaction.editReply({
             content: locale['error.banned_unverify'],
@@ -186,7 +185,10 @@ const buttonUnverify = verificationCommand.addButton('unverify', async ({ intera
     }
 
     try {
-        await UnverifyUser(discordId);
+        const success = await profile.unverify();
+        if (!success) {
+            throw new Error('Failed to unverify user in the database.')
+        }
 
         const unverifyBtn = new ButtonBuilder()
             .setCustomId('unverify')
@@ -250,9 +252,10 @@ buttonVerifyProfile.getButton().setStyle(ButtonStyle.Primary).setEmoji('🔗');
 verificationCommand.setExecute(async ({ interaction, locale, args }) => {
     await interaction.deferReply();
 
-    const discordId = interaction.user.id;
+    const profile = await Profile.create(interaction.user.id);
+    const isVerified = await profile.isVerified();
 
-    if (await UserExists(discordId)) {
+    if (isVerified) {
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
             .setTitle(locale['embed.title'])
@@ -268,7 +271,7 @@ verificationCommand.setExecute(async ({ interaction, locale, args }) => {
         });
     }
 
-    const vrchatId = args['vrchat'] ? GetVRChatId(args['vrchat'].trim()) : null;
+    const vrchatId = args['vrchat'] ? Profile.getVRChatId(args['vrchat']) : null;
     if (!vrchatId) {
         const embed = new EmbedBuilder()
             .setColor(Colors.Yellow)
@@ -285,14 +288,18 @@ verificationCommand.setExecute(async ({ interaction, locale, args }) => {
         return;
     }
 
-    if (await IsUserBanned(discordId)) {
+    const isBanned = await profile.isBanned();
+    if (isBanned) {
         return interaction.editReply(locale['error.banned']);
     }
 
     // 3. Generar el código y preparar el mensaje
-    const verificationCode = GenerateCodeByVRChat(vrchatId);
+    const verificationCode = Profile.generateCodeByVRChat(vrchatId);
+    if (!verificationCode) {
+        return interaction.editReply(locale['error.vrchat_not_found'].replace('{id}', vrchatId));
+    }
 
-    VRCHAT_CODE_VERIFY_DATA.set(discordId, { vrchat_id: vrchatId });
+    VRCHAT_CODE_VERIFY_DATA.set(profile.getProfileId(), { vrchat_id: vrchatId });
 
     // 4. Enviar el mensaje con el código y las instrucciones
     const embed = new EmbedBuilder()
