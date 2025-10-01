@@ -1,7 +1,6 @@
 /**
  * @file        cmd-profile.js
  * @author      vicentefelipechile
- * @license     MIT
  * @description Command to display a user's VRChat profile if they are verified.
  */
 
@@ -9,11 +8,10 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { Locale, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
-const { GetUserByDiscord, UserExists, GenerateCodeByVRChat } = require("../profile");
-const { GetUserById } = require("../vrchat");
 const GetRandomColor = require("../randomcolor");
+const Profile = require("../models/model-profile");
 
 // =================================================================================================
 // Variables
@@ -22,13 +20,6 @@ const GetRandomColor = require("../randomcolor");
 const profileCommand = new ModularCommand('profile')
     .setDescription('Display your profile information.')
     .setCooldown(15);
-
-profileCommand.addOption({
-    name: 'usuario',
-    description: 'User',
-    type: ApplicationCommandOptionType.User,
-    required: false,
-});
 
 // =================================================================================================
 // Localization
@@ -160,9 +151,10 @@ profileCommand.setExecute(async ({ interaction, locale, args, command }) => {
         });
     }
 
-    const userExists = await UserExists(targetId);
+    const profile = await Profile.create(targetId);
+    const isVerified = await profile.isVerified();
 
-    if (!userExists) {
+    if (!isVerified) {
         const verificationButton = new ButtonBuilder()
             .setLabel(locale['button.verify'])
             .setStyle(ButtonStyle.Primary)
@@ -174,22 +166,22 @@ profileCommand.setExecute(async ({ interaction, locale, args, command }) => {
         });
     }
 
-    const userData = await GetUserByDiscord(targetId);
-    const vrchatUser = await GetUserById(userData.vrchat_id);
+    const vrchatUser = profile.getVRChatData();
 
     const profileEmbed = FormatProfileEmbed(vrchatUser, locale);
-    const code = GenerateCodeByVRChat(userData.vrchat_id);
+    const code = profile.getVRChatCodeConfirmation();
+    let localePhraseTarget = null;
 
     if (vrchatUser.bio.includes(code)) {
-        await interaction.editReply({
-        content: locale[`embed.verification_code_detected${isTargetingAUser ? '.target' : ''}`]
+        localePhraseTarget = locale['embed.verification_code_detected' + (isTargetingAUser ? '.target' : '')]
             .replace('{code}', code)
-            .replace('{target}', isTargetingAUser ? `<@${targetId}>` : 'tu'),
-        embeds: [profileEmbed],
-        });
-    } else {
-        await interaction.editReply({ embeds: [profileEmbed] });
+            .replace('{target}', isTargetingAUser ? `<@${targetId}>` : 'tu');
     }
+
+    await interaction.editReply({
+        content: localePhraseTarget,
+        embeds: [profileEmbed],
+    });
 });
 
 // =================================================================================================
