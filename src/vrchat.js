@@ -1,14 +1,14 @@
 /**
- * El Refugio Nocturno Discord Bot
- *
- * Module: VRChat Integration
- * Description: Adds functionality to interact with VRChat API.
+ * @file        src/vrchat.js
+ * @author      vicentefelipechile
+ * @license     MIT
+ * @description VRChat API Client
  */
 
-/**
- * Imports
- */
 
+// =================================================================================================
+// Imports
+// =================================================================================================
 
 const { createInterface } = require('readline');
 const { KeyvFile } = require('keyv-file');
@@ -17,10 +17,9 @@ const { VRChat } = require('vrchat');
 const PrintMessage = require('./print.js');
 const { VRCHAT_EMAIL_CONTACT, VRCHAT_APPLICATION_NAME, VRCHAT_USERNAME, VRCHAT_PASSWORD } = require('./env.js');
 
-
-/**
- * VRChat API Client
- */
+// =================================================================================================
+// VRChat Client
+// =================================================================================================
 
 const COOKIE_FILE = 'data.json';
 const VRCHAT_CLIENT = new VRChat({
@@ -38,7 +37,14 @@ const VRCHAT_CLIENT = new VRChat({
   keyv: new KeyvFile({ filename: COOKIE_FILE }),
 });
 
+// =================================================================================================
+// Sign In Function
+// =================================================================================================
 
+/**
+ * Signs in to the VRChat API.
+ * @returns {Promise<VRChat>} - Authenticated VRChat client
+ */
 async function SignIn() {
   try {
 
@@ -68,21 +74,11 @@ async function SignIn() {
   }
 };
 
-async function GetUserById(userId) {
-  try {
-    const response = await VRCHAT_CLIENT.getUser({
-      path: { userId: userId },
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Failed to get user by ID ${userId}:`, error);
-    return null;
-  }
-};
-
+// =================================================================================================
+// Exports
+// =================================================================================================
 
 module.exports = {
   SignIn,
-  GetUserById,
   VRCHAT_CLIENT,
 };
