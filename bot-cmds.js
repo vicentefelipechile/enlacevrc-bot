@@ -1,8 +1,26 @@
+/**
+ * @license     MIT
+ * @file        deploy-commands.js
+ * @author      vicentefelipechile
+ * @description Script to deploy Discord bot commands using Discord.js REST API.
+ */
+
+// =================================================================================================
+// Import Statements
+// =================================================================================================
+
+// Modules
 const { REST, Routes } = require("discord.js");
 const { readdirSync } = require("node:fs");
 const { join } = require("node:path");
-const PrintMessage = require("./src/print");
+
+// Project Modules
 const { DISCORD_TOKEN, DISCORD_CLIENT_ID } = require("./src/env");
+const PrintMessage = require("./src/print");
+
+// =================================================================================================
+// Command Deployment
+// =================================================================================================
 
 const commandsToDeploy = [];
 
@@ -23,6 +41,10 @@ for (const file of commandFiles) {
         }
     }
 }
+
+// =================================================================================================
+// Register Commands with Discord API
+// =================================================================================================
 
 const rest = new REST().setToken(DISCORD_TOKEN);
 
