@@ -34,7 +34,9 @@ class Profile {
     constructor(profileId = null, profileData = null) {
         this.profileId = profileId;
         this.profileData = profileData;
+        this.vrchatData = null; // Store VRChat API data
         this._isLoaded = profileData !== null;
+        this._vrchatDataLoaded = false;
         
         // Detect and store ID type for optimization
         if (profileId) {
@@ -46,6 +48,11 @@ class Profile {
         // Private static properties for shared functionality
         if (!Profile._cache) {
             Profile._cache = new NodeCache({ stdTTL: 60 * 60 }); // Cache for 1 hour
+        }
+        
+        // Cache for VRChat data (shorter TTL since it changes more frequently)
+        if (!Profile._vrchatCache) {
+            Profile._vrchatCache = new NodeCache({ stdTTL: 10 * 60 }); // Cache for 10 minutes
         }
         
         if (!Profile._endpoint) {
@@ -63,11 +70,12 @@ class Profile {
     /**
      * Factory method to create a Profile instance with auto-loaded data
      * @param {string} profileId - The profile ID to load (Discord ID or VRChat ID starting with "usr_")
-     * @returns {Promise<Profile>} - Profile instance with loaded data
+     * @param {boolean} allowPartialLoad - Allow loading VRChat data even if user doesn't exist in database
+     * @returns {Promise<Profile>} - Profile instance with loaded data (may be partial if user doesn't exist)
      */
-    static async create(profileId) {
+    static async create(profileId, allowPartialLoad = true) {
         const profile = new Profile(profileId);
-        await profile.load();
+        await profile.load(false, allowPartialLoad);
         return profile;
     }
 
@@ -123,16 +131,17 @@ class Profile {
     static async add(profileData) {
         try {
             // Basic validation
-            if (!profileData.vrchat_id || !profileData.discord_id || !profileData.vrchat_name) {
-                throw new Error('Missing required fields: vrchat_id, discord_id, and vrchat_name are required');
+            if (!profileData.vrchat_id || !profileData.discord_id) {
+                throw new Error('Missing required fields: vrchat_id and discord_id are required');
             }
 
             // Variable extraction
             const {
                 vrchat_id: vrchatId,
                 discord_id: discordId,
-                vrchat_name: vrchatName
             } = profileData;
+
+            const vrchatName = profileData.vrchat_name || 'Unknown User';
 
             // API call to create profile
             const response = await fetch(Profile._endpoint, {
@@ -237,7 +246,9 @@ class Profile {
             }
 
             // Fetch VRChat name from API
-            const vrchatResponse = await VRCHAT_CLIENT.getUser(vrchatId);
+            const vrchatResponse = await VRCHAT_CLIENT.getUser({
+                path: { userId: vrchatId }
+            });
             
             if (vrchatResponse.response.status !== 200) {
                 throw new Error(`Failed to fetch VRChat user data: ${vrchatResponse.response.status}`);
@@ -303,6 +314,7 @@ class Profile {
 
             // Cache the result
             Profile._cache.set(profileId, data);
+
             return data;
         } catch (e) {
             console.error(`Error fetching profile: ${e.message}`);
@@ -371,15 +383,20 @@ class Profile {
     /**
      * Load profile data for this instance
      * @param {boolean} forceReload - Force reload even if data is already loaded
+     * @param {boolean} allowPartialLoad - Allow loading VRChat data even if user doesn't exist in database
      * @returns {Promise<boolean>} - True if profile data was loaded successfully
      */
-    async load(forceReload = false) {
+    async load(forceReload = false, allowPartialLoad = true) {
         if (!this.profileId) {
             throw new Error('Profile ID is required to load profile data');
         }
 
         // Skip loading if data is already loaded and not forcing reload
         if (this._isLoaded && !forceReload) {
+            // Still try to load VRChat data if requested and not loaded
+            if (!this._vrchatDataLoaded) {
+                await this.loadVRChatData();
+            }
             return true;
         }
 
@@ -387,8 +404,61 @@ class Profile {
         if (result.success && result.data) {
             this.profileData = result.data;
             this._isLoaded = true;
+            
+            // Automatically load VRChat data if requested
+            await this.loadVRChatData();
+            
             return true;
         }
+        
+        if (allowPartialLoad && this.isVRChatProfile) {
+            const vrchatData = await Profile.getVRChatData(this.profileId);
+            if (vrchatData) {
+                this.vrchatData = vrchatData;
+                this._vrchatDataLoaded = true;
+
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    /**
+     * Load VRChat data for this profile
+     * @param {boolean} forceReload - Force reload even if data is already loaded
+     * @returns {Promise<boolean>} - True if VRChat data was loaded successfully
+     */
+    async loadVRChatData(forceReload = false) {
+        if (!this.profileData || !this.profileData.vrchat_id) {
+            // Can't load VRChat data without VRChat ID
+            return false;
+        }
+
+        const vrchatId = this.profileData.vrchat_id;
+
+        // Check cache first (unless forcing reload)
+        if (!forceReload && Profile._vrchatCache.has(vrchatId)) {
+            this.vrchatData = Profile._vrchatCache.get(vrchatId);
+            this._vrchatDataLoaded = true;
+            return true;
+        }
+
+        try {
+            const data = await Profile.getVRChatData(vrchatId);
+            if (data) {
+                this.vrchatData = data;
+                this._vrchatDataLoaded = true;
+                
+                // Cache the VRChat data
+                Profile._vrchatCache.set(vrchatId, data);
+                
+                return true;
+            }
+        } catch (e) {
+            console.error(`Error loading VRChat data for ${vrchatId}: ${e.message}`);
+        }
+        
         return false;
     }
 
@@ -470,7 +540,6 @@ class Profile {
      * @returns {Promise<boolean>} - True if user is verified
      */
     async isVerified() {
-        await this.ensureLoaded();
         return this.profileData !== null;
     }
 
@@ -497,17 +566,32 @@ class Profile {
      * @param {string} vrchatName - VRChat name
      * @returns {Promise<boolean>} - True if user was verified successfully
      */
-    async verify(vrchatId, vrchatName) {
+    async verify() {
         const isVerified = await this.isVerified();
         if (isVerified) throw new Error('User is already verified');
 
         const isBanned = await this.isBanned();
         if (isBanned) throw new Error('User is banned');
 
+        const vrchatId = this.isVRChatProfile ? this.profileId : await this.getVRChatId();
+        if (!vrchatId) {
+            throw new Error('VRChat ID is required to verify user');
+        }
+
+        const discordId = this.isDiscordProfile ? this.profileId : await this.getDiscordId();
+        if (!discordId) {
+            throw new Error('Discord ID is required to verify user');
+        }
+
+        let vrchatName;
+        if (this.isVRChatProfile) {
+            vrchatName = this.vrchatData ? this.vrchatData.displayName : null;
+        }
+
         return await Profile.add({
             vrchat_id: vrchatId,
-            discord_id: this.profileId,
-            vrchat_name: vrchatName,
+            discord_id: discordId,
+            vrchat_name: vrchatName || 'Unknown User',
         });
     }
 
@@ -563,7 +647,9 @@ class Profile {
         }
 
         try {
-            const response = await VRCHAT_CLIENT.getUser(this.profileData.vrchat_id);
+            const response = await VRCHAT_CLIENT.getUser({
+                path: { userId: this.profileData.vrchat_id }
+            });
 
             if (response.response.status === 200) {
                 const vrchatName = response.data.displayName;
@@ -582,12 +668,10 @@ class Profile {
                         await this.load(true);
                     }
                     
-                    console.log(`Updated VRChat name for ${this.profileId}: ${vrchatName}`);
                     return vrchatName;
                 }
             }
 
-            console.error(`Error fetching VRChat user data for ${this.profileId}: ${response.response.status}`);
             return null;
         } catch (e) {
             console.error(`Error updating name for ${this.profileId}: ${e.message}`);
@@ -616,7 +700,6 @@ class Profile {
                     this.profileData.vrchat_name = newName;
                 }
                 
-                console.log(`Updated VRChat name for ${this.profileId}: ${newName}`);
                 return true;
             }
             return false;
@@ -637,6 +720,10 @@ class Profile {
      */
     static generateCodeByVRChat(vrchatId) {
         const idParts = vrchatId.substring(4).split('-');
+        if (idParts.length !== 5) {
+            throw new Error('Invalid VRChat ID format');
+        }
+
         const firstPart = idParts[0];
         const lastPart = idParts[idParts.length - 1];
         const code = `${firstPart.substring(0, 3)}${lastPart.substring(lastPart.length - 3)}`.toUpperCase();
@@ -645,16 +732,16 @@ class Profile {
 
     /**
      * Extract VRChat ID from URL or validate ID format
-     * @param {string} code - VRChat URL or ID
+     * @param {string} vrchatId - VRChat URL or ID
      * @returns {string|null} - VRChat ID or null if invalid
      */
-    static getVRChatId(code) {
+    static getVRChatId(vrchatId) {
         const RegexURL = new RegExp(/^(?:https?:\/\/)?(?:www\.)?vrchat\.com\/home\/user\/(usr_[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/);
         const RegexID = new RegExp(/^(usr_[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/);
 
-        const match = code.match(RegexURL);
+        const match = vrchatId.match(RegexURL);
         if (match && match[1]) return match[1];
-        if (RegexID.test(code)) return code;
+        if (RegexID.test(vrchatId)) return vrchatId;
         return null;
     }
 
@@ -677,6 +764,41 @@ class Profile {
         return await Profile.getUserByDiscord(vrchatId);
     }
 
+    /**
+     * Get VRChat profile data directly from VRChat API
+     * @param {string} vrchatId - VRChat ID (must start with "usr_")
+     * @returns {Promise<Object|null>} - VRChat profile data or null if not found/error
+     */
+    static async getVRChatData(vrchatId, saveInCache = true) {
+        try {
+            if (!Profile.isVRChatId(vrchatId)) {
+                const vrchatIdExtracted = Profile.getVRChatId(vrchatId);
+                if (!vrchatIdExtracted) {
+                    throw new Error('VRChat ID not found or invalid format');
+                }
+                vrchatId = vrchatIdExtracted;
+            }
+
+            const response = await VRCHAT_CLIENT.getUser({
+                path: { userId: vrchatId }
+            });
+
+            if (response.response.status === 200) {
+                if (saveInCache) {
+                    Profile._vrchatCache.set(vrchatId, response.data);
+                }
+
+                return response.data;
+            } else {
+                console.error(`VRChat API error: ${response.response.status}`);
+                return null;
+            }
+        } catch (e) {
+            console.error(`Error fetching VRChat profile data: ${e.message}`);
+            return null;
+        }
+    }
+
     // =================================================================================================
     // Getters and Setters
     // =================================================================================================
@@ -688,7 +810,9 @@ class Profile {
     setProfileId(profileId) {
         this.profileId = profileId;
         this.profileData = null; // Clear cached data when ID changes
+        this.vrchatData = null; // Clear VRChat data when ID changes
         this._isLoaded = false;
+        this._vrchatDataLoaded = false;
         
         // Update ID type detection
         if (profileId) {
@@ -706,9 +830,45 @@ class Profile {
         return this.profileData;
     }
 
-    setProfileData(data) {
-        this.profileData = data;
-        this._isLoaded = data !== null;
+    /**
+     * Get VRChat data from instance
+     * @returns {Object|null} - VRChat data or null if not loaded
+     */
+    getVRChatData() {
+        return this.vrchatData;
+    }
+
+    /**
+     * Set VRChat data for this instance
+     * @param {Object} data - VRChat data to set
+     */
+    setVRChatData(data) {
+        this.vrchatData = data;
+        this._vrchatDataLoaded = data !== null;
+    }
+
+    /**
+     * Check if VRChat data is loaded
+     * @returns {boolean} - True if VRChat data is loaded
+     */
+    isVRChatDataLoaded() {
+        return this._vrchatDataLoaded && this.vrchatData !== null;
+    }
+
+    /**
+     * Check if user is registered in the database
+     * @returns {boolean} - True if user exists in database
+     */
+    isRegistered() {
+        return this._isLoaded && this.profileData !== null;
+    }
+
+    /**
+     * Check if this is a partial profile (VRChat data only, not in database)
+     * @returns {boolean} - True if only VRChat data is available
+     */
+    isPartialProfile() {
+        return !this.isRegistered() && this.isVRChatDataLoaded();
     }
 
     /**
@@ -727,6 +887,17 @@ class Profile {
      */
     async getVRChatId() {
         return await this.getField('vrchat_id');
+    }
+
+    /**
+     * Get VRChat ID code confirmation
+     * @returns {Promise<string|null>} - VRChat ID code or empty string if not available
+     */
+    async getVRChatCodeConfirmation() {
+        const vrchatId = await this.getVRChatId();
+        if (!vrchatId) return null;
+
+        return Profile.generateCodeByVRChat(vrchatId);
     }
 
     /**
