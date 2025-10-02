@@ -1,5 +1,5 @@
 /**
- * @file        models/model-profile.js
+ * @file        models/profile.js
  * @author      vicentefelipechile
  * @description Profile model class with CRUD operations and user management functionality
  */
@@ -56,7 +56,7 @@ class Profile {
         }
         
         if (!Profile._endpoint) {
-            Profile._endpoint = D1_URL;
+            Profile._endpoint = `${D1_URL}/profiles`;
         }
         
         if (!Profile._headers) {
@@ -944,5 +944,9 @@ class Profile {
         };
     }
 }
+
+// =================================================================================================
+// Export Statement
+// =================================================================================================
 
 module.exports = Profile;
