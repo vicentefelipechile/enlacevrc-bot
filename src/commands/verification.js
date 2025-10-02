@@ -1,5 +1,5 @@
 /**
- * @file        cmd-verificacion.js
+ * @file        commands/verification.js
  * @author      vicentefelipechile
  * @license     MIT
  * @description Command to allow a user to verify their Discord account with their VRChat profile.

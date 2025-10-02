@@ -1,5 +1,5 @@
 /**
- * @file        cmd-profile.js
+ * @file        commands/profile.js
  * @author      vicentefelipechile
  * @description Command to display a user's VRChat profile if they are verified.
  */

@@ -1,11 +1,19 @@
 /**
- * El Refugio Nocturno Discord Bot
- *
- * Module: Get Random Color
- * Description: Get a random color from the Colors enum in discord.js.
+ * @license     MIT
+ * @file        src/randomcolor.js
+ * @author      vicentefelipechile
+ * @description Utility function to get a random color from the Colors enum in discord.js.
  */
 
+// =================================================================================================
+// Imports
+// =================================================================================================
+
 const { Colors } = require('discord.js');
+
+// =================================================================================================
+// GetRandomColor Function
+// =================================================================================================
 
 /**
  * Get a random color from the Colors enum in discord.js.
@@ -16,5 +24,9 @@ const { Colors } = require('discord.js');
 function GetRandomColor() {
   return Object.values(Colors)[Math.floor(Math.random() * Object.values(Colors).length)];
 }
+
+// =================================================================================================
+// Export Statement
+// =================================================================================================
 
 module.exports = GetRandomColor;

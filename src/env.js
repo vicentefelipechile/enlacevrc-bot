@@ -1,4 +1,19 @@
+/**
+ * @license     MIT
+ * @file        env.js
+ * @author      vicentefelipechile
+ * @description Environment variable configuration for the Discord bot and VRChat integration.
+ */
+
+// =================================================================================================
+// Load Environment Variables
+// =================================================================================================
+
 require('dotenv').config();
+
+// =================================================================================================
+// Export Environment Variables
+// =================================================================================================
 
 module.exports = {
     // Discord Bot Info

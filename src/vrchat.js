@@ -1,10 +1,9 @@
 /**
+ * @license     MIT
  * @file        src/vrchat.js
  * @author      vicentefelipechile
- * @license     MIT
- * @description VRChat API Client
+ * @description VRChat API integration and authentication management.
  */
-
 
 // =================================================================================================
 // Imports
