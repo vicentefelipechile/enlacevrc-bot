@@ -166,7 +166,7 @@ viewProfileCommand.setExecute(async ({ interaction, locale, args }) => {
 
         if (targetId === DISCORD_CLIENT_ID) {
             return await interaction.editReply({
-                content: locale['error.same_user'],
+                content: locale['error.is_the_bot'],
                 embeds: []
             });
         }
@@ -182,12 +182,13 @@ viewProfileCommand.setExecute(async ({ interaction, locale, args }) => {
             });
         }
 
-        const profileEmbed = FormatProfileEmbed(vrchatUser, locale);
+        const vrchatData = profile.getVRChatData();
+        const profileEmbed = FormatProfileEmbed(vrchatData, locale);
         const code = profile.getVRChatCodeConfirmation();
         let responseMessage = locale['success'].replace('{target}', `<@${targetId}>`);
 
         // Check if user still has verification code in bio
-        if (vrchatUser.bio && code && vrchatUser.bio.includes(code)) {
+        if (vrchatData.bio && code && vrchatData.bio.includes(code)) {
             const codeMessage = locale['embed.verification_code_detected']
                 .replace('{code}', code)
                 .replace('{target}', `<@${targetId}>`);
