@@ -11,7 +11,7 @@
 const { Locale, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const GetRandomColor = require("../randomcolor");
-const Profile = require("../models/model-profile");
+const Profile = require("../models/profile");
 
 // =================================================================================================
 // Variables
@@ -28,6 +28,7 @@ const profileCommand = new ModularCommand('profile')
 profileCommand.setLocalizationDescription({
     [Locale.EnglishUS]: 'Display your profile information.',
     [Locale.SpanishLATAM]: 'Muestra la información de tu perfil.',
+    [Locale.SpanishES]: 'Chaval, este comando te muestra la info de tu perfil, que eres un cotilla.',
 });
 
 profileCommand.setLocalizationPhrases({
@@ -74,6 +75,28 @@ profileCommand.setLocalizationPhrases({
         'embed.verification_code_detected': 'He notado que aún tienes el código {code} en tu biografía de VRChat. Una vez verificado no hace falta mantenerlo.',
         'embed.verification_code_detected.target': 'He notado que {target} aún tiene el código {code} en su biografía de VRChat. Que alguien le avise que lo elimine ya que una vez verificado no hace falta mantenerlo-',
         'button.verify': 'Verificar',
+    },
+    [Locale.SpanishES]: {
+        "title": "Tu Perfil de VRChat, ¡Olé!",
+        "description": "Para que fardes de tu perfil de VRChat, si es que estás verificado, claro.",
+        "error.not_verified": "¡Pero chaval, que no estás verificado! Tira del comando `/{command}` para vincular tu cuenta de VRChat o dándole al botón de abajo, ¡a ver si espabilas!",
+        "error.not_verified_user": "Este pavo no está verificado. A ver si se ha enterado que tiene que vincular la cuenta con el comando `{command}`.",
+        "error.not_found": "¡Me cago en la leche! No hay manera de encontrar tu perfil. O lo has borrado o la API de VRChat está de botellón.",
+        "error.not_found_user": "Pero madre mía Willy, que no se encuentra el perfil del colega este. A lo mejor lo ha finiquitado o la API de VRChat está más liada que la pata de un romano.",
+        "error.not_allowed": "¡Quieto parao! Que no tienes permiso para andar cotilleando perfiles ajenos.",
+        "error.general": "¡Joder! Algo ha salido rana al intentar pillar tu perfil. Prueba en un ratico, ¡a tope con la cope!",
+        "embed.title": "El Perfil de {displayName} en VRChat, ¡qué fiera!",
+        "embed.description": "**Su vida y milagros, en verso**:\n{bio}",
+        "embed.status": "Cómo está el patio:",
+        "embed.status.nostatus": "Ni fu, ni fa",
+        "embed.pronouns": "Se le conoce como:",
+        "embed.pronouns.nopronouns": "A saber, tío",
+        "embed.age_verification": "¿Es mayor de edad o qué?:",
+        "embed.age_verification.verified": "Verificado, ¡como Dios manda!",
+        "embed.age_verification.not_verified": "Nanai de la China",
+        "embed.verification_code_detected": "Ojo, que he visto que todavía tienes el código {code} ahí puesto en la biografía. ¡Que no hace falta que lo dejes una vez verificado, melón!",
+        "embed.verification_code_detected.target": "¡Al loro! Que {target} todavía tiene el código {code} en su biografía. Que alguien le dé un toque y le diga que lo borre, que una vez verificado ya no pinta nada ahí.",
+        "button.verify": "¡A verificar!"
     }
 });
 

@@ -44,12 +44,16 @@ verificationCommand.setLocalizationOptions({
     },
     [Locale.SpanishLATAM]: {
         'vrchat': 'Tu URL al perfil de VRChat.',
+    },
+    [Locale.SpanishES]: {
+        'vrchat': 'Pero willy, pon aquí la URL de tu perfil de VRChat, tronco. Que no se te olvide, ¿eh?',
     }
 })
 
 verificationCommand.setLocalizationDescription({
     [Locale.EnglishUS]: 'Verify your account by linking it to your VRChat profile.',
     [Locale.SpanishLATAM]: 'Verifica tu cuenta vinculándola con tu perfil de VRChat.',
+    [Locale.SpanishES]: 'Verifica tu cuenta, que esto es más fácil que freír un huevo, tronco.',
 });
 
 verificationCommand.setLocalizationPhrases({
@@ -61,24 +65,20 @@ verificationCommand.setLocalizationPhrases({
         'error.timeout': 'Verification timed out. Please run the command again.',
         'error.code_not_found': 'The verification code was not found in your VRChat bio. Please make sure you have added it correctly and press the button again.',
         'error.vrchat_not_found': 'Could not find a user on VRChat with the ID `{id}`.',
-
         'embed.title': 'VRChat Account Verification',
         'embed.description': 'To verify your account, please follow these steps:\n\n1. Copy the following code:\n```{code}```\n2. Paste the code anywhere in your VRChat bio.\n3. Press the "Verify" button below.',
         'embed.footer': 'This button will expire in 5 minutes.',
-
         'verification.verify': 'Verify',
         'verification.unverify': 'Unverify',
         'verification.cancelaction': 'Cancel',
-        'success': 'Congratulations! Your account has been successfully verified.',
-        'cancelled': 'Verification cancelled.',
-
         'unverify.description': 'You are already verified. Would you like to unlink your VRChat account?',
         'unverify.button': 'Unverify',
         'unverify.success': 'Your account has been successfully unverified.',
         'unverify.error': 'An error occurred while trying to unverify your account.',
-
         'verify.title': 'Verify with your VRChat profile',
-        'verify.description': `To verify your account, you need to provide the URL to your VRChat profile as a command argument.\n\n[Go to VRChat](${VRCHAT_URL})`
+        'verify.description': `To verify your account, you need to provide the URL to your VRChat profile as a command argument.\n\n[Go to VRChat](${VRCHAT_URL})`,
+        'success': 'Congratulations! Your account has been successfully verified.',
+        'cancelled': 'Verification cancelled.',
     },
     [Locale.SpanishLATAM]: {
         'error.already_verified': 'Ya te encuentras verificado.',
@@ -89,24 +89,44 @@ verificationCommand.setLocalizationPhrases({
         'error.timeout': 'La verificación ha expirado. Por favor, ejecuta el comando de nuevo.',
         'error.code_not_found': 'No se encontró el código de verificación en tu biografía de VRChat. Asegúrate de haberlo añadido correctamente y presiona el botón de nuevo.',
         'error.vrchat_not_found': 'No se pudo encontrar un usuario en VRChat con el ID `{id}`. Por favor, revisa que esté bien escrito.',
-
         'embed.title': 'Verificación de Cuenta de VRChat',
         'embed.description': 'Para verificar tu cuenta, por favor sigue estos pasos:\n\n1. Copia el siguiente código:\n```{code}```\n2. Pega el código en cualquier parte de tu biografía de VRChat.\n3. Presiona el botón "Verificar" que aparece a continuación.',
         'embed.footer': 'Este botón expirará en 5 minutos.',
-
         'verification.verify': 'Verificar',
         'verification.unverify': 'Desverificar',
         'verification.cancelaction': 'Cancelar',
-        'success': '¡Felicidades! Tu cuenta ha sido verificada exitosamente.',
-        'cancelled': 'Verificación cancelada.',
-
         'unverify.description': 'Ya te encuentras verificado. ¿Deseas desvincular tu cuenta de VRChat?',
         'unverify.button': 'Desverificar',
         'unverify.success': 'Tu cuenta ha sido desverificada exitosamente.',
         'unverify.error': 'Ocurrió un error al intentar desverificar tu cuenta.',
-
         'verify.title': 'Verificar con tu perfil de VRChat',
-        'verify.description': `Para verificar tu cuenta tienes que proporcionar la URL a tu perfil de VRChat como argumento del comando.\n\n[Ir a VRChat](${VRCHAT_URL})`
+        'verify.description': `Para verificar tu cuenta tienes que proporcionar la URL a tu perfil de VRChat como argumento del comando.\n\n[Ir a VRChat](${VRCHAT_URL})`,
+        'success': '¡Felicidades! Tu cuenta ha sido verificada exitosamente.',
+        'cancelled': 'Verificación cancelada.',
+    },
+    [Locale.SpanishES]: {
+        "error.already_verified": "¡Pero si ya estás más que verificado, máquina!",
+        "error.banned": "Estás baneado, chaval. Así que de verificarte, nanai de la China.",
+        "error.banned_unverify": "Estás baneado, colega. No puedes quitar la verificación ni de coña.",
+        "error.vrchat_not_found": "¡Joder! Que no encuentro a ningún pavo que se llame `{username}` en VRChat. Mírate bien el nombre, anda.",
+        "error.generic": "Madre mía Willy, algo ha petado. Dale un rato y prueba otra vez.",
+        "error.timeout": "¡Se te ha pasado el arroz! La verificación ha caducado. Tira el comando de nuevo.",
+        "error.code_not_found": "¿Pero dónde está el código? Que no lo veo en tu biografía, me cago en la leche. Asegúrate de que lo has pegado bien y dale al botón otra vez.",
+        "error.vrchat_not_found_id": "Que no, que con el ID `{id}` no hay ni dios en VRChat. Revisa que lo has puesto bien.",
+        "embed.title": "Verificación de la Cuenta de VRChat, ¡al turrón!",
+        "embed.description": "Venga, para verificarte, haz esto que es pan comido:\n\n1. Pilla el código este:\n```{code}```\n2. Lo plantas en cualquier sitio de tu biografía de VRChat.\n3. Le das al botón de \"Verificar\" de aquí abajo y a correr.",
+        "embed.footer": "Ojo, que el botón este se autodestruye en 5 minutos.",
+        "verification.verify": "¡Verificar!",
+        "verification.unverify": "Quitar Verificación",
+        "verification.cancelaction": "Cancelar, que me he liado",
+        "unverify.description": "A ver, que ya estás verificado. ¿Seguro que quieres quitar el vínculo con tu cuenta de VRChat?",
+        "unverify.button": "Sí, quitarla",
+        "unverify.success": "¡Listo! Tu cuenta ya no está verificada. A otra cosa, mariposa.",
+        "unverify.error": "¡Hostia! Algo ha fallado al intentar quitar la verificación.",
+        "verify.title": "Verifícate con tu perfil de VRChat, ¡vamos!",
+        "verify.description": "Para verificarte, tienes que soltar la URL de tu perfil de VRChat en el comando, ¿vale?\n\n[Ir a VRChat](${VRCHAT_URL})",
+        "success": "¡Enhorabuena, crack! Tu cuenta está verificada. ¡A tope!",
+        "cancelled": "Pues nada, verificación cancelada. Tú te lo pierdes."
     }
 });
 
