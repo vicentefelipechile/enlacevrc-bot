@@ -10,7 +10,6 @@
 
 const { D1_URL, D1_PRIVATE_KEY } = require('../env');
 const NodeCache = require('node-cache');
-const Profile = require('./profile');
 
 // =================================================================================================
 // Discord Model Class
@@ -139,12 +138,19 @@ class DiscordSettings {
     /**
      * Get all Discord settings for a server
      * @param {string} discordServerId - Discord server ID
+     * @param {boolean} forceReload - Force reload even if cached
      * @returns {Promise<Object|null>} - Object with all settings or null if none found
      */
-    static async getAll(discordServerId) {
+    static async getAll(discordServerId, forceReload = false) {
         try {
             if (!discordServerId) {
                 throw new Error('Missing required parameter: discordServerId is required');
+            }
+
+            // Check cache first
+            const cached = DiscordSettings._cache.get(discordServerId);
+            if (cached && !forceReload) {
+                return cached;
             }
 
             const url = new URL(`${DiscordSettings._endpoint}/${discordServerId}`);
@@ -160,7 +166,12 @@ class DiscordSettings {
             }
 
             const result = await response.json();
-            return result.data || null;
+            const data = result.data || {};
+
+            // Cache the settings
+            DiscordSettings._cache.set(discordServerId, data);
+
+            return data;
         } catch (error) {
             console.error('Error getting all Discord settings:', error.message);
             return null;
@@ -190,6 +201,11 @@ class DiscordSettings {
             });
 
             const result = await response.json();
+            if (result.success === true) {
+                // Clear cache
+                DiscordSettings._cache.del(discordServerId);
+            }
+
             return result.success === true;
         } catch (error) {
             console.error('Error updating Discord setting:', error.message);
@@ -218,10 +234,131 @@ class DiscordSettings {
             });
 
             const result = await response.json();
+            if (result.success === true) {
+                // Clear cache
+                DiscordSettings._cache.del(discordServerId);
+            }
+
             return result.success === true;
         } catch (error) {
             console.error('Error deleting Discord setting:', error.message);
             return false;
+        }
+    }
+
+    /**
+     * Register multiple settings for a Discord server (static method)
+     * @param {string} discordServerId - Discord server ID
+     * @param {Object} settingsObject - Object containing key-value pairs of settings to register
+     * @param {Object} options - Registration options
+     * @param {boolean} options.overwrite - Whether to overwrite existing settings (default: false)
+     * @param {boolean} options.validateAll - Whether to validate all settings before registering any (default: true)
+     * @returns {Promise<Object>} - Object containing success status and details about registered settings
+     * @example
+     * ```javascript
+     * // Register multiple settings at once
+     * const result = await DiscordSettings.registerSettings('123456789012345678', {
+     *     'welcome_channel': '987654321098765432',
+     *     'verification_role': '111222333444555666',
+     *     'log_channel': '777888999000111222',
+     *     'auto_role': '333444555666777888'
+     * }, { overwrite: false, validateAll: true });
+     * 
+     * console.log(result);
+     * // Output: { success: true, registered: 4, skipped: 0, updated: 0, errors: [] }
+     * ```
+     */
+    static async registerSettings(discordServerId, settingsObject, options = {}) {
+        try {
+            if (!discordServerId) {
+                throw new Error('Missing required parameter: discordServerId is required');
+            }
+
+            if (!settingsObject || typeof settingsObject !== 'object') {
+                throw new Error('Missing required parameter: settingsObject must be a valid object');
+            }
+
+            const { overwrite = false, validateAll = true } = options;
+            
+            const results = {
+                success: true,
+                registered: 0,
+                skipped: 0,
+                updated: 0,
+                errors: []
+            };
+
+            // Get existing settings for validation
+            let existingSettings = {};
+            if (validateAll || !overwrite) {
+                existingSettings = await DiscordSettings.getAll(discordServerId) || {};
+            }
+
+            // Validate all settings first if validateAll is true
+            if (validateAll) {
+                for (const [settingKey, settingValue] of Object.entries(settingsObject)) {
+                    if (!settingKey || settingValue === undefined || settingValue === null) {
+                        results.errors.push(`Invalid setting: ${settingKey} - key and value are required`);
+                    }
+                }
+
+                // If validation errors found and validateAll is true, return early
+                if (results.errors.length > 0) {
+                    results.success = false;
+                    return results;
+                }
+            }
+
+            // Process each setting
+            for (const [settingKey, settingValue] of Object.entries(settingsObject)) {
+                try {
+                    if (!settingKey || settingValue === undefined || settingValue === null) {
+                        if (!validateAll) {
+                            results.errors.push(`Invalid setting: ${settingKey} - key and value are required`);
+                        }
+                        continue;
+                    }
+
+                    const settingExists = existingSettings.hasOwnProperty(settingKey);
+                    
+                    if (settingExists) {
+                        if (overwrite) {
+                            const updated = await DiscordSettings.update(discordServerId, settingKey, String(settingValue));
+                            if (updated) {
+                                results.updated++;
+                            } else {
+                                results.errors.push(`Failed to update setting: ${settingKey}`);
+                            }
+                        } else {
+                            results.skipped++;
+                        }
+                    } else {
+                        const added = await DiscordSettings.add(discordServerId, settingKey, String(settingValue));
+                        if (added) {
+                            results.registered++;
+                        } else {
+                            results.errors.push(`Failed to register setting: ${settingKey}`);
+                        }
+                    }
+                } catch (error) {
+                    results.errors.push(`Error processing ${settingKey}: ${error.message}`);
+                }
+            }
+
+            // Set success to false if there were any errors
+            results.success = results.errors.length === 0;
+
+            return results;
+
+        } catch (error) {
+            console.error('Error registering Discord settings:', error.message);
+            return {
+                success: false,
+                registered: 0,
+                skipped: 0,
+                updated: 0,
+                errors: [`General error: ${error.message}`]
+            };
         }
     }
 
@@ -316,7 +453,7 @@ class DiscordSettings {
             if (success && this.isLoaded) {
                 this.settingsData[settingKey] = settingValue;
                 // Update cache
-                Profile._cache.set(this.discordServerId, this.settingsData);
+                DiscordSettings._cache.set(this.discordServerId, this.settingsData);
             }
 
             return success;
@@ -342,13 +479,177 @@ class DiscordSettings {
             if (success && this.isLoaded && this.settingsData[settingKey]) {
                 delete this.settingsData[settingKey];
                 // Update cache
-                Profile._cache.set(this.discordServerId, this.settingsData);
+                DiscordSettings._cache.set(this.discordServerId, this.settingsData);
             }
 
             return success;
         } catch (error) {
             console.error('Error deleting Discord setting:', error.message);
             return false;
+        }
+    }
+
+    /**
+     * Register multiple new settings for the Discord server
+     * @param {Object} settingsObject - Object containing key-value pairs of settings to register
+     * @param {boolean} overwrite - Whether to overwrite existing settings (default: false)
+     * @returns {Promise<Object>} - Object containing success status and details about registered settings
+     * @example
+     * ```javascript
+     * const result = await discordSettings.registerSettings({
+     *     'welcome_channel': '123456789',
+     *     'verification_role': '987654321',
+     *     'log_channel': '555666777'
+     * }, false);
+     * console.log(result); // { success: true, registered: 3, skipped: 0, errors: [] }
+     * ```
+     */
+    async registerSettings(settingsObject, overwrite = false) {
+        if (!this.discordServerId) {
+            throw new Error('Discord server ID is required');
+        }
+
+        if (!settingsObject || typeof settingsObject !== 'object') {
+            throw new Error('Settings object is required and must be an object');
+        }
+
+        const results = {
+            success: true,
+            registered: 0,
+            skipped: 0,
+            updated: 0,
+            errors: []
+        };
+
+        try {
+            // Ensure settings are loaded for checking existing values
+            if (!this.isLoaded) {
+                await this.load();
+            }
+
+            for (const [settingKey, settingValue] of Object.entries(settingsObject)) {
+                try {
+                    if (!settingKey || settingValue === undefined || settingValue === null) {
+                        results.errors.push(`Invalid setting: ${settingKey} - key and value are required`);
+                        continue;
+                    }
+
+                    const existingValue = this.getSetting(settingKey);
+                    
+                    if (existingValue !== null) {
+                        if (overwrite) {
+                            const updated = await this.setSetting(settingKey, String(settingValue));
+                            if (updated) {
+                                results.updated++;
+                            } else {
+                                results.errors.push(`Failed to update setting: ${settingKey}`);
+                            }
+                        } else {
+                            results.skipped++;
+                        }
+                    } else {
+                        const added = await this.setSetting(settingKey, String(settingValue));
+                        if (added) {
+                            results.registered++;
+                        } else {
+                            results.errors.push(`Failed to register setting: ${settingKey}`);
+                        }
+                    }
+                } catch (error) {
+                    results.errors.push(`Error processing ${settingKey}: ${error.message}`);
+                }
+            }
+
+            // Set success to false if there were any errors
+            results.success = results.errors.length === 0;
+
+        } catch (error) {
+            console.error('Error registering Discord settings:', error.message);
+            results.success = false;
+            results.errors.push(`General error: ${error.message}`);
+        }
+
+        return results;
+    }
+
+    /**
+     * Register a single new setting with validation
+     * @param {string} settingKey - Setting key
+     * @param {string} settingValue - Setting value
+     * @param {Object} options - Registration options
+     * @param {boolean} options.overwrite - Whether to overwrite existing setting (default: false)
+     * @param {Function} options.validator - Optional validation function for the value
+     * @returns {Promise<Object>} - Object containing success status and operation details
+     * @example
+     * ```javascript
+     * const result = await discordSettings.registerSetting('max_warnings', '3', {
+     *     overwrite: true,
+     *     validator: (value) => !isNaN(value) && parseInt(value) > 0
+     * });
+     * ```
+     */
+    async registerSetting(settingKey, settingValue, options = {}) {
+        if (!this.discordServerId) {
+            throw new Error('Discord server ID is required');
+        }
+
+        if (!settingKey || settingValue === undefined || settingValue === null) {
+            throw new Error('Setting key and value are required');
+        }
+
+        const { overwrite = false, validator = null } = options;
+
+        try {
+            // Validate the value if validator is provided
+            if (validator && typeof validator === 'function') {
+                const isValid = validator(settingValue);
+                if (!isValid) {
+                    return {
+                        success: false,
+                        action: 'validation_failed',
+                        message: `Validation failed for setting: ${settingKey}`
+                    };
+                }
+            }
+
+            // Ensure settings are loaded
+            if (!this.isLoaded) {
+                await this.load();
+            }
+
+            const existingValue = this.getSetting(settingKey);
+            
+            if (existingValue !== null && !overwrite) {
+                return {
+                    success: false,
+                    action: 'skipped',
+                    message: `Setting ${settingKey} already exists and overwrite is disabled`
+                };
+            }
+
+            const success = await this.setSetting(settingKey, String(settingValue));
+            
+            if (success) {
+                return {
+                    success: true,
+                    action: existingValue !== null ? 'updated' : 'created',
+                    message: `Setting ${settingKey} ${existingValue !== null ? 'updated' : 'registered'} successfully`
+                };
+            } else {
+                return {
+                    success: false,
+                    action: 'failed',
+                    message: `Failed to register setting: ${settingKey}`
+                };
+            }
+
+        } catch (error) {
+            console.error('Error registering Discord setting:', error.message);
+            return {
+                success: false,
+                action: 'error',
+                message: error.message
+            };
         }
     }
 }
