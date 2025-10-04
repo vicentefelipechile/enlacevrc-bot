@@ -13,6 +13,8 @@ const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Mess
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const NodeCache = require("node-cache");
 const Profile = require("../models/profile");
+const DiscordSettings = require("../models/discord");
+const DISCORD_SERVER_SETTINGS = require("../models/discordsettings");
 
 // =================================================================================================
 // Variables
@@ -167,6 +169,24 @@ const buttonVerify = verificationCommand.addButton('verify', async ({ interactio
                 .setStyle(ButtonStyle.Success)
                 .setEmoji('✅')
                 .setDisabled(true);
+
+            try {
+                const guildId = interaction.guild.id;
+                const discordSettings = new DiscordSettings(guildId);
+                await discordSettings.load();
+
+                const autonickname = discordSettings.getSetting(DISCORD_SERVER_SETTINGS.AUTO_NICKNAME);
+                const autoNicknameEnabled = discordSettings && autonickname === 1;
+
+                if (autoNicknameEnabled) {
+                    // Cambiar el nombre del usuario en Discord por el de VRChat
+                    const vrchatUsername = await profile.getVRChatName();
+                    await interaction.member.setNickname(vrchatUsername);
+                }
+            } catch (err) {
+                console.error("Error setting Discord nickname:", err);
+                // No interrumpir el flujo si falla el cambio de nickname
+            }
                 
             await interaction.editReply({
                 content: locale['success'],
