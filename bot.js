@@ -19,6 +19,7 @@ const { join } = require("node:path");
 const { SignIn } = require("./src/vrchat");
 const { DISCORD_TOKEN } = require("./src/env");
 const PrintMessage = require("./src/print");
+const OnServerAdded = require("./src/events/onserverjoined");
 
 
 // =================================================================================================
@@ -58,6 +59,8 @@ for (const cmd of commands) {
 // =================================================================================================
 
 client.on(Events.InteractionCreate, ModularCommandHandler(client));
+
+client.on(Events.GuildCreate, OnServerAdded);
 
 client.once(Events.ClientReady, async () => {
     PrintMessage(`Logged in as ${client.user.tag}`);
