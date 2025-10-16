@@ -21,11 +21,14 @@ const DISCORD_SERVER_SETTINGS = require("../models/discordsettings");
 const settingsCommand = new ModularCommand('settings')
     .setDescription('Configure bot settings for this server.')
     .setCooldown(5)
-    .setPermissionCheck((interaction) => interaction.member.permissions.has(PermissionFlagsBits.ManageGuild));
+    .setPermissionCheck((interaction) => {
+        return interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
+    });
 
 const SUBCOMMANDS_NAME = {
     VERIFICATION_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE,
     VERIFICATION_PLUS_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE,
+    VERIFICATION_CHANNEL: DISCORD_SERVER_SETTINGS.VERIFICATION_CHANNEL,
     AUTO_NICKNAME: DISCORD_SERVER_SETTINGS.AUTO_NICKNAME,
     VIEW: 'view',
     RESET: 'reset'
@@ -36,7 +39,7 @@ const SUBCOMMANDS_NAME = {
 // =================================================================================================
 
 settingsCommand.addSubCommand({
-    name: SUBCOMMANDS_NAME.VERIFIED_ROLE,
+    name: SUBCOMMANDS_NAME.VERIFICATION_ROLE,
     description: 'Set the role given to verified users',
     options: [
         {
@@ -49,7 +52,7 @@ settingsCommand.addSubCommand({
 });
 
 settingsCommand.addSubCommand({
-    name: SUBCOMMANDS_NAME.VERIFIED_18_ROLE,
+    name: SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE,
     description: 'Set the role given to 18+ verified users',
     options: [
         {
@@ -129,8 +132,8 @@ settingsCommand.setLocalizationPhrases({
         'error.general': 'An error occurred while processing the settings. Please try again later.',
         'error.setting_failed': 'Failed to update the setting. Please try again.',
         'error.not_found': 'Setting not found or already reset.',
-        'success.verified_role': 'Verified role has been set to {role}.',
-        'success.verified_18_role': '18+ verified role has been set to {role}.',
+        'success.verification_role': 'Verification role has been set to {role}.',
+        'success.verification_plus_role': '18+ verification role has been set to {role}.',
         'success.verification_channel': 'Verification channel has been set to {channel}.',
         'success.auto_nickname': 'Auto nickname update has been {status}.',
         'success.reset': 'Setting "{setting}" has been reset successfully.',
@@ -140,9 +143,8 @@ settingsCommand.setLocalizationPhrases({
         'status.disabled': 'disabled',
         'view.title': 'Server Settings - {serverName}',
         'view.description': 'Current bot configuration for this server:',
-        'view.verified_role': 'Verified Role:',
-        'view.verified_18_role': '18+ Verified Role:',
-        'view.welcome_channel': 'Welcome Channel:',
+        'view.verification_role': 'Verification Role:',
+        'view.verification_plus_role': '18+ Verification Role:',
         'view.verification_channel': 'Verification Channel:',
         'view.auto_nickname': 'Auto Nickname:',
         'view.not_set': 'Not set',
@@ -154,8 +156,8 @@ settingsCommand.setLocalizationPhrases({
         'error.general': 'Ocurrió un error al procesar la configuración. Por favor, inténtalo de nuevo más tarde.',
         'error.setting_failed': 'No se pudo actualizar la configuración. Por favor, inténtalo de nuevo.',
         'error.not_found': 'Configuración no encontrada o ya restablecida.',
-        'success.verified_role': 'El rol de verificado ha sido establecido como {role}.',
-        'success.verified_18_role': 'El rol de verificado +18 ha sido establecido como {role}.',
+        'success.verification_role': 'El rol de verificación ha sido establecido como {role}.',
+        'success.verification_plus_role': 'El rol de verificación +18 ha sido establecido como {role}.',
         'success.verification_channel': 'El canal de verificación ha sido establecido como {channel}.',
         'success.auto_nickname': 'La actualización automática de apodos ha sido {status}.',
         'success.reset': 'La configuración "{setting}" ha sido restablecida exitosamente.',
@@ -165,9 +167,8 @@ settingsCommand.setLocalizationPhrases({
         'status.disabled': 'deshabilitada',
         'view.title': 'Configuración del Servidor - {serverName}',
         'view.description': 'Configuración actual del bot para este servidor:',
-        'view.verified_role': 'Rol Verificado:',
-        'view.verified_18_role': 'Rol Verificado +18:',
-        'view.welcome_channel': 'Canal de Bienvenida:',
+        'view.verification_role': 'Rol de Verificación:',
+        'view.verification_plus_role': 'Rol de Verificación +18:',
         'view.verification_channel': 'Canal de Verificación:',
         'view.auto_nickname': 'Apodo Automático:',
         'view.not_set': 'No establecido',
@@ -179,9 +180,9 @@ settingsCommand.setLocalizationPhrases({
         'error.general': '¡Madre mía, qué movida! Algo ha fallado con la configuración. Prueba otra vez en un rato, colega.',
         'error.setting_failed': '¡Me cago en la leche! No se ha podido guardar el ajuste. Dale otra vez, que esto no va.',
         'error.not_found': 'Ese ajuste ni está ni se le espera, o ya lo has reseteado, figura.',
-        'success.verified_role': '¡De lujo! El rol de verificado ahora es {role}, como Dios manda.',
-        'success.verified_18_role': '¡Canelita en rama! El rol de verificado +18 ahora es {role}.',
-        'success.verification_channel': '¡Eso es! El canal de verificación ahora es {channel}.',
+        'success.verification_role': '¡De lujo! El rol de verificación ahora es {role}, como Dios manda.',
+        'success.verification_plus_role': '¡Canelita en rama! El rol de verificación +18 ahora es {role}.',
+        'success.verification_channel': '¡Hecho! El canal de verificación ahora es {channel}, tronco.',
         'success.auto_nickname': 'La actualización automática de apodos está {status}, chaval.',
         'success.reset': 'El ajuste "{setting}" se ha reseteado que da gusto.',
         'success.reset_all': '¡Menuda limpieza! Todos los ajustes del servidor han vuelto a cero, como nuevos.',
@@ -190,11 +191,10 @@ settingsCommand.setLocalizationPhrases({
         'status.disabled': 'desactivada, que tampoco pasa nada',
         'view.title': 'Ajustes del Server - {serverName}',
         'view.description': 'Aquí tienes toda la configuración del bot para este antro, colega:',
-        'view.verified_role': 'Rol de Verificado:',
-        'view.verified_18_role': 'Rol de Verificado +18:',
-        'view.welcome_channel': 'Canal de Bienvenida:',
-        'view.verification_channel': 'Canal de Verificación:',
+        'view.verification_role': 'Rol de Verificación:',
+        'view.verification_plus_role': 'Rol de Verificación +18:',
         'view.auto_nickname': 'Apodo Automático:',
+        'view.verification_channel': 'Canal de Verificación:',
         'view.not_set': 'Ni puesto, macho',
         'view.enabled': 'Activado',
         'view.disabled': 'Desactivado',
@@ -203,20 +203,20 @@ settingsCommand.setLocalizationPhrases({
 
 settingsCommand.setLocalizationSubCommands({
     [Locale.EnglishUS]: {
-        [`${SUBCOMMANDS_NAME.VERIFIED_ROLE}`]: 'Role for Verified Users',
-        [`${SUBCOMMANDS_NAME.VERIFIED_ROLE}.description`]: 'Set the role given to verified users',
-        [`${SUBCOMMANDS_NAME.VERIFIED_ROLE}.role`]: 'Role',
-        [`${SUBCOMMANDS_NAME.VERIFIED_ROLE}.role.description`]: 'The role to assign to verified users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}`]: 'Role for Verified Users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.description`]: 'Set the role given to verified users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role`]: 'Role',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role.description`]: 'The role to assign to verified users',
 
-        [`${SUBCOMMANDS_NAME.VERIFIED_18_ROLE}`]: 'Role for 18+ Verified Users',
-        [`${SUBCOMMANDS_NAME.VERIFIED_18_ROLE}.description`]: 'Set the role given to 18+ verified users',
-        [`${SUBCOMMANDS_NAME.VERIFIED_18_ROLE}.role`]: 'Role',
-        [`${SUBCOMMANDS_NAME.VERIFIED_18_ROLE}.role.description`]: 'The role to assign to 18+ verified users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}`]: 'Role for 18+ Verified Users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.description`]: 'Set the role given to 18+ verified users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role`]: 'Role',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role.description`]: 'The role to assign to 18+ verified users',
 
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: 'Verification Channel',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: 'Channel for Verification',
         [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.description`]: 'Set the channel where verification commands are allowed',
         [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel`]: 'Channel',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: 'The channel where verification commands are allowed',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: 'The channel for verification commands',
 
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}`]: 'Auto Nickname Update',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.description`]: 'Enable or disable automatic nickname updates for new members',
@@ -235,10 +235,80 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.RESET}.option.description`]: 'The setting to reset',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_role`]: 'Verified Role',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_18_role`]: '18+ Verified Role',
-        [`${SUBCOMMANDS_NAME.RESET}.option.choice.welcome_channel`]: 'Welcome Channel',
-        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verification_channel`]: 'Verification Channel',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.auto_nickname`]: 'Auto Nickname',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: 'All Settings'
+    },
+    [Locale.SpanishLATAM]: {
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}`]: 'Rol para Usuarios Verificados',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.description`]: 'Establece el rol otorgado a los usuarios verificados',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role`]: 'Rol',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role.description`]: 'El rol que se asignará a los usuarios verificados',
+
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}`]: 'Rol para Usuarios Verificados +18',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.description`]: 'Establece el rol otorgado a los usuarios verificados +18',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role`]: 'Rol',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role.description`]: 'El rol que se asignará a los usuarios verificados +18',
+
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: 'Canal de Verificación',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.description`]: 'Establece el canal donde se permiten los comandos de verificación',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel`]: 'Canal',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: 'El canal para los comandos de verificación',
+
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}`]: 'Actualización Automática de Apodo',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.description`]: 'Habilita o deshabilita las actualizaciones automáticas de apodo para nuevos miembros',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: 'Habilitar Apodo Automático',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled.description`]: 'Habilita o deshabilita las actualizaciones automáticas de apodo para nuevos miembros',
+
+        [`${SUBCOMMANDS_NAME.VIEW}`]: 'Ver Configuración',
+        [`${SUBCOMMANDS_NAME.VIEW}.description`]: 'Ver la configuración actual del servidor',
+
+        [`${SUBCOMMANDS_NAME.RESET}`]: 'Restablecer Configuración',
+        [`${SUBCOMMANDS_NAME.RESET}.description`]: 'Restablece una configuración específica o todas las configuraciones',
+        [`${SUBCOMMANDS_NAME.RESET}.setting`]: 'Configuración a Restablecer',
+        [`${SUBCOMMANDS_NAME.RESET}.setting.description`]: 'La configuración que deseas restablecer',
+
+        [`${SUBCOMMANDS_NAME.RESET}.option`]: 'Configuración',
+        [`${SUBCOMMANDS_NAME.RESET}.option.description`]: 'La configuración a restablecer',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_role`]: 'Rol Verificado',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_18_role`]: 'Rol Verificado +18',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.auto_nickname`]: 'Apodo Automático',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: 'Todas las Configuraciones'
+    },
+    [Locale.SpanishES]: {
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}`]: 'Rol para los que están verificados',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.description`]: 'Aquí puedes poner el rol que se les da a los usuarios verificados',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role`]: 'El Rol',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role.description`]: 'El rol que se asignará a los usuarios verificados, tronco',
+
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}`]: 'Rol para los que están verificados +18',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.description`]: 'Aquí puedes poner el rol que se les da a los usuarios verificados +18',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role`]: 'El Rol',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role.description`]: 'El rol que se asignará a los usuarios verificados +18, figura',
+
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: 'Canal de Verificación',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.description`]: 'Aquí puedes poner el canal donde se permiten los comandos de verificación',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel`]: 'El Canal',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: 'El canal para los comandos de verificación, colega',
+
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}`]: 'Actualización Automática de Apodo',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.description`]: 'Activa o desactiva que se actualicen los apodos automáticamente para los nuevos miembros',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: 'Activar Apodo Automático',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled.description`]: 'Activa o desactiva que se actualicen los apodos automáticamente para los nuevos miembros, chaval',
+
+        [`${SUBCOMMANDS_NAME.VIEW}`]: 'Ver Ajustes',
+        [`${SUBCOMMANDS_NAME.VIEW}.description`]: 'Mira cómo tienes el server configurado',
+
+        [`${SUBCOMMANDS_NAME.RESET}`]: 'Resetear Ajuste',
+        [`${SUBCOMMANDS_NAME.RESET}.description`]: 'Resetea un ajuste específico o todos los ajustes',
+        [`${SUBCOMMANDS_NAME.RESET}.setting`]: 'Ajuste a Resetear',
+        [`${SUBCOMMANDS_NAME.RESET}.setting.description`]: 'El ajuste que quieres resetear',
+
+        [`${SUBCOMMANDS_NAME.RESET}.option`]: 'Ajuste',
+        [`${SUBCOMMANDS_NAME.RESET}.option.description`]: 'El ajuste que quieres resetear',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_role`]: 'Rol Verificado',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_18_role`]: 'Rol Verificado +18',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.welcome_channel`]: 'Canal de Bienvenida',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: 'Todos los Ajustes'
     }
 });
 
@@ -296,27 +366,27 @@ settingsCommand.setExecute(async ({ interaction, locale, args }) => {
         const settingsExist = await DiscordSettings.exists(serverId);
         if (!settingsExist) {
             const result = DiscordSettings.registerSettings({
-                [SUBCOMMANDS_NAME.AUTO_NICKNAME]: null,
-                [SUBCOMMANDS_NAME.VERIFIED_18_ROLE]: null,
+                [SUBCOMMANDS_NAME.VERIFICATION_ROLE]: null,
+                [SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE]: null,
                 [SUBCOMMANDS_NAME.VERIFICATION_CHANNEL]: null,
-                [SUBCOMMANDS_NAME.AUTO_NICKNAME]: false,
+                [SUBCOMMANDS_NAME.AUTO_NICKNAME]: false
             });
 
             PrintMessage(`Default settings registered for server: ${interaction.guild.name} - ${JSON.stringify(result)}`);
-            await interaction.editReply({
+            return await interaction.editReply({
                 content: locale['success.settings_registered'],
                 embeds: []
             });
         }
 
         switch (subcommand) {
-            case SUBCOMMANDS_NAME.VERIFIED_ROLE: {
+            case SUBCOMMANDS_NAME.VERIFICATION_ROLE: {
                 const role = args['role'];
-                const success = await DiscordSettings.add(serverId, SUBCOMMANDS_NAME.VERIFIED_ROLE, role.id);
+                const success = await DiscordSettings.add(serverId, SUBCOMMANDS_NAME.VERIFICATION_ROLE, role.id);
                 
                 if (success) {
                     await interaction.editReply({
-                        content: locale['success.verified_role'].replace('{role}', `<@&${role.id}>`),
+                        content: locale['success.verification_role'].replace('{role}', `<@&${role.id}>`),
                         embeds: []
                     });
                 } else {
@@ -328,13 +398,13 @@ settingsCommand.setExecute(async ({ interaction, locale, args }) => {
                 break;
             }
 
-            case SUBCOMMANDS_NAME.VERIFIED_18_ROLE: {
+            case SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE: {
                 const role = args['role'];
-                const success = await DiscordSettings.add(serverId, SUBCOMMANDS_NAME.VERIFIED_18_ROLE, role.id);
-                
+                const success = await DiscordSettings.add(serverId, SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE, role.id);
+
                 if (success) {
                     await interaction.editReply({
-                        content: locale['success.verified_18_role'].replace('{role}', `<@&${role.id}>`),
+                        content: locale['success.verification_plus_role'].replace('{role}', `<@&${role.id}>`),
                         embeds: []
                     });
                 } else {

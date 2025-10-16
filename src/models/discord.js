@@ -362,6 +362,46 @@ class DiscordSettings {
         }
     }
 
+    /**
+     * Check if a Discord server exists in the database
+     * @param {string} serverId - Discord server ID to verify
+     * @returns {Promise<boolean>} - True if server exists, false otherwise
+     * @example
+     * ```javascript
+     * // Check if a server exists
+     * const exists = await DiscordSettings.serverExists('123456789012345678');
+     * console.log(exists); // true or false
+     * ```
+     */
+    static async exists(serverId) {
+        try {
+            if (!serverId) {
+                throw new Error('Missing required parameter: serverId is required');
+            }
+
+            // Check cache first
+            const cached = DiscordSettings._cache.get(serverId);
+            if (cached) {
+                return true;
+            }
+
+            const response = await fetch(`${DiscordSettings._endpoint}/${serverId}`, {
+                method: 'GET',
+                headers: DiscordSettings._headers
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                return result.success === true && result.data !== null;
+            }
+
+            return false;
+        } catch (error) {
+            console.error('Error checking if server exists:', error.message);
+            return false;
+        }
+    }
+
     // =================================================================================================
     // Instance Methods
     // =================================================================================================
