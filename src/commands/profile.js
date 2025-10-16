@@ -106,6 +106,9 @@ profileCommand.setLocalizationOptions({
     },
     [Locale.SpanishLATAM]: {
         'user': 'Usuario'
+    },
+    [Locale.SpanishES]: {
+        'user': 'El colega'
     }
 })
 
