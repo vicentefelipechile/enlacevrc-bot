@@ -17,6 +17,7 @@ const { join } = require("node:path");
 // Project Modules
 const { DISCORD_TOKEN, DISCORD_CLIENT_ID } = require("./src/env");
 const PrintMessage = require("./src/print");
+const { exit } = require("node:process");
 
 // =================================================================================================
 // Command Deployment
@@ -58,6 +59,7 @@ const rest = new REST().setToken(DISCORD_TOKEN);
         );
 
         PrintMessage(`Comandos registrados correctamente: ${globalData.length}`);
+        exit(0);
     } catch (error) {
         console.error(error);
     }

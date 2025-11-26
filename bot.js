@@ -19,7 +19,11 @@ const { join } = require("node:path");
 const { SignIn } = require("./src/vrchat");
 const { DISCORD_TOKEN } = require("./src/env");
 const PrintMessage = require("./src/print");
-const OnServerAdded = require("./src/events/onserverjoined");
+const { D1Class } = require("./src/d1class");
+const env = require("./src/env");
+// const OnServerAdded = require("./src/events/onserverjoined");
+
+D1Class.init({ apiKey: env.D1_PRIVATE_KEY });
 
 
 // =================================================================================================
@@ -60,7 +64,7 @@ for (const cmd of commands) {
 
 client.on(Events.InteractionCreate, ModularCommandHandler(client));
 
-client.on(Events.GuildCreate, OnServerAdded);
+// client.on(Events.GuildCreate, OnServerAdded);
 
 client.once(Events.ClientReady, async () => {
     PrintMessage(`Logged in as ${client.user.tag}`);

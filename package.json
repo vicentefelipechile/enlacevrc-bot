@@ -9,8 +9,11 @@
     "vrchat": "^2.20.3"
   },
   "scripts": {
-    "login": "node login.js",
     "start": "node bot.js",
+    "login": "node cmds/login.js",
+    "adduser": "node cmds/adduser.js",
+    "getuser": "node cmds/getuser.js",
+    "deluser": "node cmds/deluser.js",
     "deploy-commands": "node bot-cmds.js"
   },
   "type": "commonjs"

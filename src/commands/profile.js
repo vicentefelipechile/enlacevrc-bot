@@ -11,7 +11,10 @@
 const { Locale, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const GetRandomColor = require("../randomcolor");
-const Profile = require("../models/profile");
+const { D1Class } = require("../d1class");
+const { VRCHAT_CLIENT } = require("../vrchat");
+const { generateCodeByVRChat } = require("../util/vrchatcode");
+const { FormatProfileEmbed } = require("../util/profile");
 
 // =================================================================================================
 // Variables
@@ -51,7 +54,8 @@ profileCommand.setLocalizationPhrases({
         'embed.age_verification.verified': 'Verified',
         'embed.age_verification.not_verified': 'Not Verified',
         'embed.verification_code_detected': 'I noticed that you still have the code {code} in your VRChat bio. Once you are verified, it is not necessary to keep it.',
-        'embed.verification_code_detected.target': 'I noticed that {target} still has the code {code} in their VRChat bio. Someone should let them know to remove it since it is not necessary to keep it once verified.',
+        'embed.verification_data': 'Verification Data',
+        'embed.verification_data.by': 'Verified by <@{discord_id}>',
         'button.verify': 'Verify',
     },
     [Locale.SpanishLATAM]: {
@@ -73,7 +77,8 @@ profileCommand.setLocalizationPhrases({
         'embed.age_verification.verified': 'Verificado',
         'embed.age_verification.not_verified': 'No Verificado',
         'embed.verification_code_detected': 'He notado que aún tienes el código {code} en tu biografía de VRChat. Una vez verificado no hace falta mantenerlo.',
-        'embed.verification_code_detected.target': 'He notado que {target} aún tiene el código {code} en su biografía de VRChat. Que alguien le avise que lo elimine ya que una vez verificado no hace falta mantenerlo-',
+        'embed.verification_data': 'Datos de Verificación',
+        'embed.verification_data.by': 'Verificador por <@{discord_id}>',
         'button.verify': 'Verificar',
     },
     [Locale.SpanishES]: {
@@ -95,7 +100,8 @@ profileCommand.setLocalizationPhrases({
         "embed.age_verification.verified": "Verificado, ¡como Dios manda!",
         "embed.age_verification.not_verified": "Nanai de la China",
         "embed.verification_code_detected": "Ojo, que he visto que todavía tienes el código {code} ahí puesto en la biografía. ¡Que no hace falta que lo dejes una vez verificado, melón!",
-        "embed.verification_code_detected.target": "¡Al loro! Que {target} todavía tiene el código {code} en su biografía. Que alguien le dé un toque y le diga que lo borre, que una vez verificado ya no pinta nada ahí.",
+        "embed.verification_data": "Datos de la Verificación, ¡pa que lo sepas!",
+        "embed.verification_data.by": "Verificado por el colega <@{discord_id}>",
         "button.verify": "¡A verificar!"
     }
 });
@@ -113,74 +119,20 @@ profileCommand.setLocalizationOptions({
 })
 
 // =================================================================================================
-// Custom Execution Logic
-// =================================================================================================
-
-// 16 Personalities
-const PERSONALITY_URL = 'https://www.16personalities.com/es/personalidad-';
-const PERSONALITY_TYPES = [
-  'INTJ', 'INTP', 'ENTJ', 'ENTP',
-  'INFJ', 'INFP', 'ENFJ', 'ENFP',
-  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
-  'ISTP', 'ISFP', 'ESTP', 'ESFP',
-];
-
-function FormatP16(description) {
-  let formattedDescription = description;
-  for (const type of PERSONALITY_TYPES) {
-    const regex = new RegExp(`\\b(${type}(?:-[A-Z])?)\\b`, 'gi');
-    if (regex.test(description)) {
-      const url = `${PERSONALITY_URL}${type.toLowerCase()}`;
-      formattedDescription = formattedDescription.replace(regex, `[$1](${url})`);
-    }
-  }
-  return formattedDescription;
-};
-
-// =================================================================================================
-// Profile Embed Formatting
-// =================================================================================================
-
-function FormatProfileEmbed(vrchatUser, locale) {
-  // const ageVerified = locale['embed.age_verification.' + (vrchatUser.ageVerified ? 'verified' : 'not_verified')];
-
-  const sanitizedBio = vrchatUser.bio.replace(/([`*_~|\\-])/g, '\\$1');
-  const formattedBio = FormatP16(sanitizedBio);
-
-  return new EmbedBuilder()
-    .setColor(GetRandomColor())
-    .setTitle(vrchatUser.displayName)
-    .setURL(`https://vrchat.com/home/user/${vrchatUser.id}`)
-    .setDescription(locale['embed.description'].replace('{bio}', formattedBio || 'No biography available'))
-    .setImage(vrchatUser.profilePicOverride || vrchatUser.currentAvatarImageUrl)
-    .addFields(
-      { name: locale['embed.status'], value: vrchatUser.statusDescription || locale['embed.status.nostatus'], inline: true },
-      { name: locale['embed.pronouns'], value: vrchatUser.pronouns || locale['embed.pronouns.nopronouns'], inline: true },
-    )
-    .setFooter({ text: `ID: ${vrchatUser.id}` })
-    .setTimestamp(new Date(vrchatUser.date_joined));
-}
-
-// =================================================================================================
 // Command Execution
 // =================================================================================================
 
-profileCommand.setExecute(async ({ interaction, locale, args, command }) => {
+profileCommand.setExecute(async ({ interaction, locale, command }) => {
     await interaction.deferReply();
-    const isTargetingAUser = args['usuario'] && args['usuario'].id !== interaction.user.id;
-    const targetId = isTargetingAUser ? args['usuario'].id : interaction.user.id;
 
-    if (isTargetingAUser && !interaction.member.permissions.has('ModerateMembers')) {
-        return await interaction.editReply({
-            content: locale['error.not_allowed'],
-            embeds: []
-        });
-    }
+    let profileData = null;
 
-    const profile = await Profile.create(targetId);
-    const isVerified = await profile.isVerified();
-
-    if (!isVerified) {
+    try {
+        profileData = await D1Class.getProfile({
+            discord_id: interaction.user.id,
+            discord_name: interaction.user.username
+        }, interaction.user.id);
+    } catch (error) {
         const verificationButton = new ButtonBuilder()
             .setLabel(locale['button.verify'])
             .setStyle(ButtonStyle.Primary)
@@ -192,16 +144,20 @@ profileCommand.setExecute(async ({ interaction, locale, args, command }) => {
         });
     }
 
-    const vrchatUser = profile.getVRChatData();
+    const vrchatResponse = await VRCHAT_CLIENT.getUser({
+        path: {
+            userId: profileData.vrchat_id,
+        }
+    });
+    const vrchatData = vrchatResponse.data;
 
-    const profileEmbed = FormatProfileEmbed(vrchatUser, locale);
-    const code = profile.getVRChatCodeConfirmation();
+    const profileEmbed = FormatProfileEmbed(vrchatData, profileData, locale);
+    const code = generateCodeByVRChat(vrchatData.id);
     let localePhraseTarget = null;
 
-    if (vrchatUser.bio.includes(code)) {
-        localePhraseTarget = locale['embed.verification_code_detected' + (isTargetingAUser ? '.target' : '')]
-            .replace('{code}', code)
-            .replace('{target}', isTargetingAUser ? `<@${targetId}>` : 'tu');
+    if (vrchatData.bio.includes(code)) {
+        localePhraseTarget = locale['embed.verification_code_detected']
+            .replace('{code}', code);
     }
 
     await interaction.editReply({

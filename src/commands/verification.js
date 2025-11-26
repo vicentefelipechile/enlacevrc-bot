@@ -9,12 +9,13 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, Colors, AttachmentBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, Colors, AttachmentBuilder, ApplicationCommandOptionType, ComponentType, Component, ContainerBuilder, TextDisplayComponent, TextDisplayBuilder, MediaGalleryBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const NodeCache = require("node-cache");
-const Profile = require("../models/profile");
-const DiscordSettings = require("../models/discord");
-const DISCORD_SERVER_SETTINGS = require("../models/discordsettings");
+const DISCORD_SERVER_SETTINGS = require("../discordsettings");
+const { D1Class } = require("../d1class");
+const { generateCodeByVRChat, getVRChatId } = require("../util/vrchatcode");
+const { VRCHAT_CLIENT } = require("../vrchat");
 
 // =================================================================================================
 // Variables
@@ -78,7 +79,8 @@ verificationCommand.setLocalizationPhrases({
         'unverify.success': 'Your account has been successfully unverified.',
         'unverify.error': 'An error occurred while trying to unverify your account.',
         'verify.title': 'Verify with your VRChat profile',
-        'verify.description': `To verify your account, you need to provide the URL to your VRChat profile as a command argument.\n\n[Go to VRChat](${VRCHAT_URL})`,
+        'verify.description': 'To verify your account, you need to provide the URL to your VRChat profile as a command argument.',
+        'verify.gotovrchat': 'Go to VRChat',
         'success': 'Congratulations! Your account has been successfully verified.',
         'cancelled': 'Verification cancelled.',
     },
@@ -102,7 +104,8 @@ verificationCommand.setLocalizationPhrases({
         'unverify.success': 'Tu cuenta ha sido desverificada exitosamente.',
         'unverify.error': 'Ocurrió un error al intentar desverificar tu cuenta.',
         'verify.title': 'Verificar con tu perfil de VRChat',
-        'verify.description': `Para verificar tu cuenta tienes que proporcionar la URL a tu perfil de VRChat como argumento del comando.\n\n[Ir a VRChat](${VRCHAT_URL})`,
+        'verify.description': 'Para verificar tu cuenta tienes que proporcionar la URL a tu perfil de VRChat como argumento del comando.',
+        'verify.gotovrchat': 'Ir a VRChat',
         'success': '¡Felicidades! Tu cuenta ha sido verificada exitosamente.',
         'cancelled': 'Verificación cancelada.',
     },
@@ -126,7 +129,8 @@ verificationCommand.setLocalizationPhrases({
         "unverify.success": "¡Listo! Tu cuenta ya no está verificada. A otra cosa, mariposa.",
         "unverify.error": "¡Hostia! Algo ha fallado al intentar quitar la verificación.",
         "verify.title": "Verifícate con tu perfil de VRChat, ¡vamos!",
-        "verify.description": "Para verificarte, tienes que soltar la URL de tu perfil de VRChat en el comando, ¿vale?\n\n[Ir a VRChat](${VRCHAT_URL})",
+        "verify.description": "Para verificarte, tienes que soltar la URL de tu perfil de VRChat en el comando, ¿vale?",
+        "verify.gotovrchat": "Ir a VRChat",
         "success": "¡Enhorabuena, crack! Tu cuenta está verificada. ¡A tope!",
         "cancelled": "Pues nada, verificación cancelada. Tú te lo pierdes."
     }
@@ -141,6 +145,10 @@ const buttonVerify = verificationCommand.addButton('verify', async ({ interactio
 
     const discordId = interaction.user.id;
     const cachedData = VRCHAT_CODE_VERIFY_DATA.get(discordId);
+    const userRequestData = {
+        discord_id: discordId,
+        discord_name: interaction.user.username
+    };
 
     if (!cachedData) {
         return interaction.editReply({
@@ -151,59 +159,39 @@ const buttonVerify = verificationCommand.addButton('verify', async ({ interactio
     }
 
     const { vrchat_id: vrchatId } = cachedData;
-    const partialProfile = await Profile.create(vrchatId);
-    const code = Profile.generateCodeByVRChat(vrchatId);
-
-    try {
-        const vrchatData = partialProfile.getVRChatData();
-
-        if (vrchatData.bio && vrchatData.bio.includes(code)) {
-            const profile = await Profile.createUserWithAutoName(vrchatId, discordId);
-            if (!profile) {
-                throw new Error('Failed to verify user in the database.');
-            }
-
-            const verifyButton = new ButtonBuilder()
-                .setCustomId('verify')
-                .setLabel(locale['verification.verify'])
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('✅')
-                .setDisabled(true);
-
-            try {
-                const guildId = interaction.guild.id;
-                const discordSettings = new DiscordSettings(guildId);
-                await discordSettings.load();
-
-                const autonickname = discordSettings.getSetting(DISCORD_SERVER_SETTINGS.AUTO_NICKNAME);
-                const autoNicknameEnabled = discordSettings && autonickname === 1;
-
-                if (autoNicknameEnabled) {
-                    // Cambiar el nombre del usuario en Discord por el de VRChat
-                    const vrchatUsername = await profile.getVRChatName();
-                    await interaction.member.setNickname(vrchatUsername);
-                }
-            } catch (err) {
-                console.error("Error setting Discord nickname:", err);
-                // No interrumpir el flujo si falla el cambio de nickname
-            }
-                
-            await interaction.editReply({
-                content: locale['success'],
-                embeds: [],
-                components: [new ActionRowBuilder().addComponents(verifyButton)]
-            });
-        } else {
-            // Si no, informar al usuario
-            await interaction.followUp({
-                content: locale['error.code_not_found'],
-                flags: MessageFlags.Ephemeral
-            });
+    const vrchatResponse = await VRCHAT_CLIENT.getUser({
+        path: {
+            userId: vrchatId
         }
-    } catch (error) {
-        console.error("Verification process error:", error);
+    });
+    const vrchatData = vrchatResponse.data;
+    const code = generateCodeByVRChat(vrchatId);
+
+    if (vrchatData.bio && vrchatData.bio.includes(code)) {
+        await D1Class.createProfile(userRequestData, {
+            discord_id: discordId,
+            vrchat_id: vrchatId,
+            vrchat_name: vrchatData.displayName
+        });
+
+        const verifyButton = new ButtonBuilder()
+            .setCustomId('verify')
+            .setLabel(locale['verification.verify'])
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('✅')
+            .setDisabled(true);
+
+        interaction.member.setNickname(vrchatData.displayName)
+            
+        await interaction.editReply({
+            content: locale['success'],
+            embeds: [],
+            components: [new ActionRowBuilder().addComponents(verifyButton)]
+        });
+    } else {
+        // Si no, informar al usuario
         await interaction.followUp({
-            content: locale['error.generic'],
+            content: locale['error.code_not_found'],
             flags: MessageFlags.Ephemeral
         });
     }
@@ -213,10 +201,24 @@ buttonVerify.getButton().setStyle(ButtonStyle.Success).setEmoji('✅');
 
 const buttonUnverify = verificationCommand.addButton('unverify', async ({ interaction, locale }) => {
     await interaction.deferUpdate();
-    const profile = await Profile.create(interaction.user.id);
-    const isBanned = await profile.isBanned();
+    const userRequestData = {
+        discord_id: interaction.user.id,
+        discord_name: interaction.user.username
+    };
 
-    if (isBanned) {
+    let profileData = null;
+
+    try {
+        profileData = await D1Class.getProfile(userRequestData, interaction.user.id, true);
+    } catch (error) {
+        return interaction.editReply({
+            content: locale['error.no_profile'],
+            embeds: [],
+            components: [],
+        });
+    }
+
+    if (profileData.is_banned) {
         return interaction.editReply({
             content: locale['error.banned_unverify'],
             embeds: [],
@@ -225,7 +227,7 @@ const buttonUnverify = verificationCommand.addButton('unverify', async ({ intera
     }
 
     try {
-        const success = await profile.unverify();
+        const success = await D1Class.deleteProfile(userRequestData, interaction.user.id);
         if (!success) {
             throw new Error('Failed to unverify user in the database.')
         }
@@ -289,13 +291,27 @@ buttonVerifyProfile.getButton().setStyle(ButtonStyle.Primary).setEmoji('🔗');
 // Command Execution
 // =================================================================================================
 
+const goToVRChatButton = new ButtonBuilder()
+    .setStyle(ButtonStyle.Link)
+    .setURL(VRCHAT_URL)
+    .setEmoji('🔗');
+
 verificationCommand.setExecute(async ({ interaction, locale, args }) => {
     await interaction.deferReply();
 
-    const profile = await Profile.create(interaction.user.id);
-    const isVerified = await profile.isVerified();
+    const userRequestData = {
+        discord_id: interaction.user.id,
+        discord_name: interaction.user.username
+    };
+    let profileData = null;
 
-    if (isVerified) {
+    try {
+        profileData = await D1Class.getProfile(userRequestData, interaction.user.id, true);
+    } catch (error) {
+        // it's normal if the profile doesn't exist
+    }
+
+    if (profileData) {
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
             .setTitle(locale['embed.title'])
@@ -311,35 +327,40 @@ verificationCommand.setExecute(async ({ interaction, locale, args }) => {
         });
     }
 
-    const vrchatId = args['vrchat'] ? Profile.getVRChatId(args['vrchat']) : null;
+    const vrchatId = args['vrchat'] ? getVRChatId(args['vrchat']) : null;
     if (!vrchatId) {
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Yellow)
-            .setTitle(locale['verify.title'])
-            .setDescription(locale['verify.description']);
+        const videoComponent = new ContainerBuilder()
+            .setAccentColor(Colors.Aqua)
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(locale['verify.description'])
+            )
+            .addMediaGalleryComponents(
+                new MediaGalleryBuilder().addItems({
+                    media: {
+                        url: 'attachment://' + commandVerifyVideo.name,
+                    }
+                })
+            )
+            .addActionRowComponents(
+                new ActionRowBuilder().addComponents(goToVRChatButton.setLabel())
+            );
 
         await interaction.editReply({
-            content: '',
-            embeds: [embed],
-            components: [],
+            flags: MessageFlags.IsComponentsV2,
+            components: [videoComponent],
             files: [commandVerifyVideo],
         });
 
         return;
     }
 
-    const isBanned = await profile.isBanned();
-    if (isBanned) {
-        return interaction.editReply(locale['error.banned']);
-    }
-
     // 3. Generar el código y preparar el mensaje
-    const verificationCode = Profile.generateCodeByVRChat(vrchatId);
+    const verificationCode = generateCodeByVRChat(vrchatId);
     if (!verificationCode) {
         return interaction.editReply(locale['error.vrchat_not_found'].replace('{id}', vrchatId));
     }
 
-    VRCHAT_CODE_VERIFY_DATA.set(profile.getProfileId(), { vrchat_id: vrchatId });
+    VRCHAT_CODE_VERIFY_DATA.set(interaction.user.id, { vrchat_id: vrchatId });
 
     // 4. Enviar el mensaje con el código y las instrucciones
     const embed = new EmbedBuilder()

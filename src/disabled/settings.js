@@ -10,9 +10,9 @@
 
 const { Locale, EmbedBuilder, ApplicationCommandOptionType, PermissionFlagsBits, Colors } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
-const DiscordSettings = require("../models/discord");
+const DISCORD_SERVER_SETTINGS = require("../discordsettings");
 const PrintMessage = require("../print");
-const DISCORD_SERVER_SETTINGS = require("../models/discordsettings");
+const { D1Class } = require("../class/db");
 
 // =================================================================================================
 // Variables
@@ -275,40 +275,41 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: 'Todas las Configuraciones'
     },
     [Locale.SpanishES]: {
-        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}`]: 'Rol para los que están verificados',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.description`]: 'Aquí puedes poner el rol que se les da a los usuarios verificados',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role`]: 'El Rol',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role.description`]: 'El rol que se asignará a los usuarios verificados, tronco',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}`]: '¡Madre mía Willy! Rol pa los verificados',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.description`]: 'Pon aquí el rol que quieres darle a los usuarios verificados, tronco',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role`]: 'El Rol, macho',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role.description`]: '¡Venga va! Elige el rol que se les dará a los verificados, chaval',
 
-        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}`]: 'Rol para los que están verificados +18',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.description`]: 'Aquí puedes poner el rol que se les da a los usuarios verificados +18',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role`]: 'El Rol',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role.description`]: 'El rol que se asignará a los usuarios verificados +18, figura',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}`]: '¡Ostras chaval! Rol pa los verificados +18',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.description`]: 'Aquí pones el rol para los mayores de edad verificados, que ya son mayorcitos',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role`]: 'El Rol de adultos',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role.description`]: '¡Joder tío! El rol para los usuarios +18 verificados, que no son críos',
 
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: 'Canal de Verificación',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.description`]: 'Aquí puedes poner el canal donde se permiten los comandos de verificación',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel`]: 'El Canal',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: 'El canal para los comandos de verificación, colega',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: '¡Tío! El canal de verificación',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.description`]: 'Aquí dices en qué canal se pueden usar los comandos de verificación, figura',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel`]: 'El Canal ese',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: '¡Hostia colega! Selecciona el canal donde se podrá verificar la peña',
 
-        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}`]: 'Actualización Automática de Apodo',
-        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.description`]: 'Activa o desactiva que se actualicen los apodos automáticamente para los nuevos miembros',
-        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: 'Activar Apodo Automático',
-        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled.description`]: 'Activa o desactiva que se actualicen los apodos automáticamente para los nuevos miembros, chaval',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}`]: '¡Qué fuerte! Apodo automático',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.description`]: 'Activa o desactiva que se cambien los apodos solos a los nuevos, que mola un huevo',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: '¿Lo activamos o qué?',
+        [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled.description`]: '¡Venga tío! Di si quieres que se actualicen los apodos automáticamente o no, figura',
 
-        [`${SUBCOMMANDS_NAME.VIEW}`]: 'Ver Ajustes',
-        [`${SUBCOMMANDS_NAME.VIEW}.description`]: 'Mira cómo tienes el server configurado',
+        [`${SUBCOMMANDS_NAME.VIEW}`]: '¡A ver! Mirar los ajustes',
+        [`${SUBCOMMANDS_NAME.VIEW}.description`]: 'Échale un vistazo a cómo tienes montado el chiringuito del servidor',
 
-        [`${SUBCOMMANDS_NAME.RESET}`]: 'Resetear Ajuste',
-        [`${SUBCOMMANDS_NAME.RESET}.description`]: 'Resetea un ajuste específico o todos los ajustes',
-        [`${SUBCOMMANDS_NAME.RESET}.setting`]: 'Ajuste a Resetear',
-        [`${SUBCOMMANDS_NAME.RESET}.setting.description`]: 'El ajuste que quieres resetear',
+        [`${SUBCOMMANDS_NAME.RESET}`]: '¡Ojo! Resetear todo',
+        [`${SUBCOMMANDS_NAME.RESET}.description`]: 'Dale caña y resetea un ajuste específico o todos de golpe, macho',
+        [`${SUBCOMMANDS_NAME.RESET}.setting`]: '¿Qué reseteas, crack?',
+        [`${SUBCOMMANDS_NAME.RESET}.setting.description`]: '¡Anda ya! Dime qué ajuste quieres resetear, compadre',
 
-        [`${SUBCOMMANDS_NAME.RESET}.option`]: 'Ajuste',
-        [`${SUBCOMMANDS_NAME.RESET}.option.description`]: 'El ajuste que quieres resetear',
-        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_role`]: 'Rol Verificado',
-        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_18_role`]: 'Rol Verificado +18',
+        [`${SUBCOMMANDS_NAME.RESET}.option`]: 'El ajuste, tronco',
+        [`${SUBCOMMANDS_NAME.RESET}.option.description`]: '¿Qué configuración quieres resetear, colega?',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_role`]: 'Rol de Verificados',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_18_role`]: 'Rol de Verificados +18',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.welcome_channel`]: 'Canal de Bienvenida',
-        [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: 'Todos los Ajustes'
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.auto_nickname`]: 'Apodo Automático',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: '¡Todo a la mierda! Todos los ajustes'
     }
 });
 

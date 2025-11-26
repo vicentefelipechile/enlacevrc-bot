@@ -2,8 +2,8 @@
  * Variables
  */
 
-const { VRCHAT_APPLICATION_NAME, VRCHAT_EMAIL_CONTACT, VRCHAT_PASSWORD, VRCHAT_USERNAME } = require('./src/env');
-const PrintMessage = require("./src/print");
+const { VRCHAT_APPLICATION_NAME, VRCHAT_EMAIL_CONTACT, VRCHAT_PASSWORD, VRCHAT_USERNAME } = require('../src/env');
+const PrintMessage = require("../src/print");
 const { createInterface } = require('readline');
 const { KeyvFile } = require('keyv-file');
 const { VRChat } = require('vrchat');
