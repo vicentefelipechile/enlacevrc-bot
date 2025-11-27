@@ -9,7 +9,7 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, Colors, AttachmentBuilder, ApplicationCommandOptionType, ComponentType, Component, ContainerBuilder, TextDisplayComponent, TextDisplayBuilder, MediaGalleryBuilder } = require("discord.js");
+const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, Colors, AttachmentBuilder, ApplicationCommandOptionType, ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const NodeCache = require("node-cache");
 const DISCORD_SERVER_SETTINGS = require("../discordsettings");
@@ -78,8 +78,7 @@ verificationCommand.setLocalizationPhrases({
         'unverify.button': 'Unverify',
         'unverify.success': 'Your account has been successfully unverified.',
         'unverify.error': 'An error occurred while trying to unverify your account.',
-        'verify.title': 'Verify with your VRChat profile',
-        'verify.description': 'To verify your account, you need to provide the URL to your VRChat profile as a command argument.',
+        'verify.description': '# Verification\n\nTo verify your account, you need to provide the URL to your VRChat profile as a command argument.',
         'verify.gotovrchat': 'Go to VRChat',
         'success': 'Congratulations! Your account has been successfully verified.',
         'cancelled': 'Verification cancelled.',
@@ -103,36 +102,34 @@ verificationCommand.setLocalizationPhrases({
         'unverify.button': 'Desverificar',
         'unverify.success': 'Tu cuenta ha sido desverificada exitosamente.',
         'unverify.error': 'Ocurrió un error al intentar desverificar tu cuenta.',
-        'verify.title': 'Verificar con tu perfil de VRChat',
-        'verify.description': 'Para verificar tu cuenta tienes que proporcionar la URL a tu perfil de VRChat como argumento del comando.',
+        'verify.description': '# Verificación\n\nPara verificar tu cuenta tienes que proporcionar la URL a tu perfil de VRChat como argumento del comando.',
         'verify.gotovrchat': 'Ir a VRChat',
         'success': '¡Felicidades! Tu cuenta ha sido verificada exitosamente.',
         'cancelled': 'Verificación cancelada.',
     },
     [Locale.SpanishES]: {
-        "error.already_verified": "¡Pero si ya estás más que verificado, máquina!",
-        "error.banned": "Estás baneado, chaval. Así que de verificarte, nanai de la China.",
-        "error.banned_unverify": "Estás baneado, colega. No puedes quitar la verificación ni de coña.",
-        "error.vrchat_not_found": "¡Joder! Que no encuentro a ningún pavo que se llame `{username}` en VRChat. Mírate bien el nombre, anda.",
-        "error.generic": "Madre mía Willy, algo ha petado. Dale un rato y prueba otra vez.",
-        "error.timeout": "¡Se te ha pasado el arroz! La verificación ha caducado. Tira el comando de nuevo.",
-        "error.code_not_found": "¿Pero dónde está el código? Que no lo veo en tu biografía, me cago en la leche. Asegúrate de que lo has pegado bien y dale al botón otra vez.",
-        "error.vrchat_not_found_id": "Que no, que con el ID `{id}` no hay ni dios en VRChat. Revisa que lo has puesto bien.",
-        "embed.title": "Verificación de la Cuenta de VRChat, ¡al turrón!",
-        "embed.description": "Venga, para verificarte, haz esto que es pan comido:\n\n1. Pilla el código este:\n```{code}```\n2. Lo plantas en cualquier sitio de tu biografía de VRChat.\n3. Le das al botón de \"Verificar\" de aquí abajo y a correr.",
-        "embed.footer": "Ojo, que el botón este se autodestruye en 5 minutos.",
-        "verification.verify": "¡Verificar!",
-        "verification.unverify": "Quitar Verificación",
-        "verification.cancelaction": "Cancelar, que me he liado",
-        "unverify.description": "A ver, que ya estás verificado. ¿Seguro que quieres quitar el vínculo con tu cuenta de VRChat?",
-        "unverify.button": "Sí, quitarla",
-        "unverify.success": "¡Listo! Tu cuenta ya no está verificada. A otra cosa, mariposa.",
-        "unverify.error": "¡Hostia! Algo ha fallado al intentar quitar la verificación.",
-        "verify.title": "Verifícate con tu perfil de VRChat, ¡vamos!",
-        "verify.description": "Para verificarte, tienes que soltar la URL de tu perfil de VRChat en el comando, ¿vale?",
-        "verify.gotovrchat": "Ir a VRChat",
-        "success": "¡Enhorabuena, crack! Tu cuenta está verificada. ¡A tope!",
-        "cancelled": "Pues nada, verificación cancelada. Tú te lo pierdes."
+        'error.already_verified': '¡Pero si ya estás más que verificado, máquina!',
+        'error.banned': 'Estás baneado, chaval. Así que de verificarte, nanai de la China.',
+        'error.banned_unverify': 'Estás baneado, colega. No puedes quitar la verificación ni de coña.',
+        'error.vrchat_not_found': '¡Joder! Que no encuentro a ningún pavo que se llame `{username}` en VRChat. Mírate bien el nombre, anda.',
+        'error.generic': 'Madre mía Willy, algo ha petado. Dale un rato y prueba otra vez.',
+        'error.timeout': '¡Se te ha pasado el arroz! La verificación ha caducado. Tira el comando de nuevo.',
+        'error.code_not_found': '¿Pero dónde está el código? Que no lo veo en tu biografía, me cago en la leche. Asegúrate de que lo has pegado bien y dale al botón otra vez.',
+        'error.vrchat_not_found_id': 'Que no, que con el ID `{id}` no hay ni dios en VRChat. Revisa que lo has puesto bien.',
+        'embed.title': 'Verificación de la Cuenta de VRChat, ¡al turrón!',
+        'embed.description': 'Venga, para verificarte, haz esto que es pan comido:\n\n1. Pilla el código este:\n```{code}```\n2. Lo plantas en cualquier sitio de tu biografía de VRChat.\n3. Le das al botón de \"Verificar\" de aquí abajo y a correr.',
+        'embed.footer': 'Ojo, que el botón este se autodestruye en 5 minutos.',
+        'verification.verify': '¡Verificar!',
+        'verification.unverify': 'Quitar Verificación',
+        'verification.cancelaction': 'Cancelar, que me he liado',
+        'unverify.description': 'A ver, que ya estás verificado. ¿Seguro que quieres quitar el vínculo con tu cuenta de VRChat?',
+        'unverify.button': 'Sí, quitarla',
+        'unverify.success': '¡Listo! Tu cuenta ya no está verificada. A otra cosa, mariposa.',
+        'unverify.error': '¡Hostia! Algo ha fallado al intentar quitar la verificación.',
+        'verify.description': '# Verificación\n\nPara verificarte, tienes que soltar la URL de tu perfil de VRChat en el comando, ¿vale?',
+        'verify.gotovrchat': 'Ir a VRChat',
+        'success': '¡Enhorabuena, crack! Tu cuenta está verificada. ¡A tope!',
+        'cancelled': 'Pues nada, verificación cancelada. Tú te lo pierdes.'
     }
 });
 
@@ -246,7 +243,7 @@ const buttonUnverify = verificationCommand.addButton('unverify', async ({ intera
         });
 
     } catch (error) {
-        console.error("Unverification error:", error);
+        console.error('Unverification error:', error);
         await interaction.editReply({
             content: locale['unverify.error'],
             embeds: [],
@@ -271,17 +268,27 @@ buttonCancel.getButton().setStyle(ButtonStyle.Secondary).setEmoji('⏹️');
 const buttonVerifyProfile = verificationCommand.addButton('profile', async ({ interaction, locale }) => {
     await interaction.deferUpdate();
 
-    const embed = new EmbedBuilder()
-        .setColor(Colors.Yellow)
-        .setTitle(locale['verify.title'])
-        .setDescription(locale['verify.description']);
+        const videoComponent = new ContainerBuilder()
+            .setAccentColor(Colors.Aqua)
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(locale['verify.description'])
+            )
+            .addMediaGalleryComponents(
+                new MediaGalleryBuilder().addItems({
+                    media: {
+                        url: 'attachment://' + commandVerifyVideo.name,
+                    }
+                })
+            )
+            .addActionRowComponents(
+                new ActionRowBuilder().addComponents(goToVRChatButton.setLabel(locale['verify.gotovrchat']))
+            );
 
-    await interaction.editReply({
-        content: '',
-        embeds: [embed],
-        components: [],
-        files: [commandVerifyVideo],
-    });
+        await interaction.editReply({
+            flags: MessageFlags.IsComponentsV2,
+            components: [videoComponent],
+            files: [commandVerifyVideo],
+        });
 });
 
 buttonVerifyProfile.getButton().setStyle(ButtonStyle.Primary).setEmoji('🔗');
@@ -342,7 +349,7 @@ verificationCommand.setExecute(async ({ interaction, locale, args }) => {
                 })
             )
             .addActionRowComponents(
-                new ActionRowBuilder().addComponents(goToVRChatButton.setLabel())
+                new ActionRowBuilder().addComponents(goToVRChatButton.setLabel(locale['verify.gotovrchat']))
             );
 
         await interaction.editReply({
@@ -380,7 +387,61 @@ verificationCommand.setExecute(async ({ interaction, locale, args }) => {
 });
 
 // =================================================================================================
+// How to verify
+// =================================================================================================
+
+const howToVerifyCommand = new ModularCommand('howtoverify')
+    .setDescription('Instructions on how to verify your VRChat account with Discord.');
+
+howToVerifyCommand.setLocalizationDescription({
+    [Locale.EnglishUS]: 'Instructions on how to verify your VRChat account with Discord.',
+    [Locale.SpanishLATAM]: 'Instrucciones sobre cómo verificar tu cuenta de VRChat con Discord.',
+    [Locale.SpanishES]: 'Instrucciones para verificar tu cuenta de VRChat con Discord, ¡fácil y rápido!',
+});
+
+howToVerifyCommand.setLocalizationPhrases({
+    [Locale.EnglishUS]: {
+        'verify.description': '# Verification\n\nTo verify your account, please follow these steps:\n\n1. Copy the verification code generated by the `/verification` command.\n2. Paste the code anywhere in your VRChat bio.\n3. Return to Discord and press the "Verify" button in the verification message.',
+        'verify.gotovrchat': 'Go to VRChat',
+    },
+    [Locale.SpanishLATAM]: {
+        'verify.description': '# Verificación\n\nPara verificar tu cuenta, por favor sigue estos pasos:\n\n1. Copia el código de verificación generado por el comando `/verification`.\n2. Pega el código en cualquier parte de tu biografía de VRChat.\n3. Regresa a Discord y presiona el botón "Verificar" en el mensaje de verificación.',
+        'verify.gotovrchat': 'Ir a VRChat',
+    },
+    [Locale.SpanishES]: {
+        'verify.description': '# Verificación\n\nPara verificar tu cuenta, por favor sigue estos pasos:\n\n1. Copia el código de verificación generado por el comando `/verification`.\n2. Pega el código en cualquier parte de tu biografía de VRChat.\n3. Regresa a Discord y presiona el botón "Verificar" en el mensaje de verificación.',
+        'verify.gotovrchat': 'Ir a VRChat',
+    }
+});
+
+howToVerifyCommand.setExecute(async ({ interaction, locale }) => {
+    await interaction.deferReply();
+
+    const videoComponent = new ContainerBuilder()
+        .setAccentColor(Colors.Aqua)
+        .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(locale['verify.description'])
+        )
+        .addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems({
+                media: {
+                    url: 'attachment://' + commandVerifyVideo.name,
+                }
+            })
+        )
+        .addActionRowComponents(
+            new ActionRowBuilder().addComponents(goToVRChatButton.setLabel(locale['verify.gotovrchat']))
+        );
+
+    await interaction.editReply({
+        flags: MessageFlags.IsComponentsV2,
+        components: [videoComponent],
+        files: [commandVerifyVideo],
+    });
+});
+
+// =================================================================================================
 // Exports
 // =================================================================================================
 
-module.exports = RegisterCommand([verificationCommand]);
+module.exports = RegisterCommand([verificationCommand, howToVerifyCommand]);

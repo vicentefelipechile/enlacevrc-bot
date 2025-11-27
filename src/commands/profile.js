@@ -8,7 +8,7 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
+const { Locale, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const GetRandomColor = require("../randomcolor");
 const { D1Class } = require("../d1class");
@@ -44,19 +44,22 @@ profileCommand.setLocalizationPhrases({
         'error.not_found_user': 'Could not find the specified VRChat profile. It may have been deleted or there is an issue with the VRChat API.',
         'error.not_allowed': 'You do not have permission to view another user\'s profile.',
         'error.general': 'An error occurred while trying to retrieve your profile. Please try again later.',
-        'embed.title': '{displayName} - VRChat Profile',
-        'embed.description': '**Biography**:\n{bio}',
-        'embed.status': 'Status:',
-        'embed.status.nostatus': 'No status',
-        'embed.pronouns': 'Pronouns:',
-        'embed.pronouns.nopronouns': 'Not specified',
-        'embed.age_verification': 'Age Verification: {ageVerification}',
-        'embed.age_verification.verified': 'Verified',
-        'embed.age_verification.not_verified': 'Not Verified',
-        'embed.verification_code_detected': 'I noticed that you still have the code {code} in your VRChat bio. Once you are verified, it is not necessary to keep it.',
-        'embed.verification_data': 'Verification Data',
-        'embed.verification_data.by': 'Verified by <@{discord_id}>',
         'button.verify': 'Verify',
+        'button.view_profile': 'View Profile',
+        'button.view_personality': 'View Personality',
+        'embed.nostatus': 'No status',
+        'embed.nopronouns': 'Not specified',
+        'embed.verification_code_detected': 'I noticed that you still have the code {code} in your VRChat biography. Once verified, there is no need to keep it there.',
+        'embed.verification_by': 'Verified by <@{discord_id}>',
+        'embed.body':
+            `# [{profile_name}]({profile_url})` +
+            `\n` +
+            `\n## Biography` +
+            `\n` +
+            `\n{profile_bio}` +
+            `\n` +
+            `\n**Status**: {profile_status}` +
+            `\n**Pronouns**: {profile_wokestuff}`,
     },
     [Locale.SpanishLATAM]: {
         'title': 'Perfil de VRChat',
@@ -67,42 +70,48 @@ profileCommand.setLocalizationPhrases({
         'error.not_found_user': 'No se pudo encontrar el perfil de VRChat especificado. Puede que haya sido eliminado o que haya un problema con la API de VRChat.',
         'error.not_allowed': 'No tienes permiso para ver el perfil de otro usuario.',
         'error.general': 'Ocurrió un error al intentar obtener tu perfil. Por favor, inténtalo de nuevo más tarde.',
-        'embed.title': '{displayName} - Perfil de VRChat',
-        'embed.description': '**Biografía**:\n{bio}',
-        'embed.status': 'Estado:',
-        'embed.status.nostatus': 'Sin estado',
-        'embed.pronouns': 'Pronombres:',
-        'embed.pronouns.nopronouns': 'No especificado',
-        'embed.age_verification': 'Verificación de Edad:',
-        'embed.age_verification.verified': 'Verificado',
-        'embed.age_verification.not_verified': 'No Verificado',
-        'embed.verification_code_detected': 'He notado que aún tienes el código {code} en tu biografía de VRChat. Una vez verificado no hace falta mantenerlo.',
-        'embed.verification_data': 'Datos de Verificación',
-        'embed.verification_data.by': 'Verificador por <@{discord_id}>',
         'button.verify': 'Verificar',
+        'button.view_profile': 'Ver perfil',
+        'button.view_personality': 'Ver personalidad',
+        'embed.nostatus': 'Sin estado',
+        'embed.nopronouns': 'No especificado',
+        'embed.verification_code_detected': 'He notado que aún tienes el código {code} en tu biografía de VRChat. Una vez verificado no hace falta mantenerlo.',
+        'embed.verification_by': 'Verificador por <@{discord_id}>',
+        'embed.body':
+            `# [{profile_name}]({profile_url})` +
+            `\n` +
+            `\n## Biografia` +
+            `\n` +
+            `\n{profile_bio}` +
+            `\n` +
+            `\n**Estado**: {profile_status}` +
+            `\n**Pronombres**: {profile_wokestuff}`,
     },
     [Locale.SpanishES]: {
-        "title": "Tu Perfil de VRChat, ¡Olé!",
-        "description": "Para que fardes de tu perfil de VRChat, si es que estás verificado, claro.",
-        "error.not_verified": "¡Pero chaval, que no estás verificado! Tira del comando `/{command}` para vincular tu cuenta de VRChat o dándole al botón de abajo, ¡a ver si espabilas!",
-        "error.not_verified_user": "Este pavo no está verificado. A ver si se ha enterado que tiene que vincular la cuenta con el comando `{command}`.",
-        "error.not_found": "¡Me cago en la leche! No hay manera de encontrar tu perfil. O lo has borrado o la API de VRChat está de botellón.",
-        "error.not_found_user": "Pero madre mía Willy, que no se encuentra el perfil del colega este. A lo mejor lo ha finiquitado o la API de VRChat está más liada que la pata de un romano.",
-        "error.not_allowed": "¡Quieto parao! Que no tienes permiso para andar cotilleando perfiles ajenos.",
-        "error.general": "¡Joder! Algo ha salido rana al intentar pillar tu perfil. Prueba en un ratico, ¡a tope con la cope!",
-        "embed.title": "El Perfil de {displayName} en VRChat, ¡qué fiera!",
-        "embed.description": "**Su vida y milagros, en verso**:\n{bio}",
-        "embed.status": "Cómo está el patio:",
-        "embed.status.nostatus": "Ni fu, ni fa",
-        "embed.pronouns": "Se le conoce como:",
-        "embed.pronouns.nopronouns": "A saber, tío",
-        "embed.age_verification": "¿Es mayor de edad o qué?:",
-        "embed.age_verification.verified": "Verificado, ¡como Dios manda!",
-        "embed.age_verification.not_verified": "Nanai de la China",
-        "embed.verification_code_detected": "Ojo, que he visto que todavía tienes el código {code} ahí puesto en la biografía. ¡Que no hace falta que lo dejes una vez verificado, melón!",
-        "embed.verification_data": "Datos de la Verificación, ¡pa que lo sepas!",
-        "embed.verification_data.by": "Verificado por el colega <@{discord_id}>",
-        "button.verify": "¡A verificar!"
+        'title': '¡Tú Perfil de VRChat, Tío!',
+        'description': '¡Anda, que te voy a enseñar tu perfil de VRChat, pero si estás verificado, claro, que no vales ni pa eso!',
+        'error.not_verified': '¡Madre mía Willy! ¡Que no estás verificao, chaval! Tira pa lante con el comando `/{command}` para vincular tu cuenta o dale al botón de abajo, ¡que vales menos que un chicle mascao!',
+        'error.not_verified_user': '¡Ostras! Este tío no está verificao. Que se entere el pobrecillo que tiene que vincular la cuenta de VRChat con el comando `{command}`, ¡anda ya!',
+        'error.not_found': '¡Me cago en la mar, colega! No hay forma de encontrar tu perfil de VRChat. O lo has borrao o la API está más tumbao que un jamón serrano en agosto.',
+        'error.not_found_user': '¡Joder, tío! El perfil del compa este desapareció como hormigas en la despensa. A lo mejor lo vaporizo o la API de VRChat está tocá de la azotea, vaya usted a saber.',
+        'error.not_allowed': '¡Ey, quieto parao! Que no puedes andar cotilleando los perfiles ajenos como si fueras Marife de Triana, mira que eres soplón.',
+        'error.general': '¡Ay, que desastre! Se ha torcido algo bien feo al buscar tu perfil. Déjalo un ratillo y vuelta a intentá, verás como sale de la primera.',
+        'button.verify': 'Verificar',
+        'button.view_profile': 'Ver perfil',
+        'button.view_personality': 'Ver personalidad',
+        'embed.nostatus': 'Sin estado',
+        'embed.nopronouns': 'No especificao',
+        'embed.verification_code_detected': '¡Oye, mira que eres lerdo! Que aún llevas el código {code} en la biografía de VRChat. Una vez verificao, quítate eso del medio, que ocupa.',
+        'embed.verification_by': 'Verificao por <@{discord_id}>',
+        'embed.body':
+            `# [{profile_name}]({profile_url})` +
+            `\n` +
+            `\n## La flipante vida del colega` +
+            `\n` +
+            `\n{profile_bio}` +
+            `\n` +
+            `\n**Estado**: {profile_status}` +
+            `\n**Pronombres**: {profile_wokestuff}`,
     }
 });
 
@@ -161,8 +170,9 @@ profileCommand.setExecute(async ({ interaction, locale, command }) => {
     }
 
     await interaction.editReply({
-        content: localePhraseTarget,
-        embeds: [profileEmbed],
+        // content: localePhraseTarget,
+        components: [profileEmbed],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
     });
 });
 

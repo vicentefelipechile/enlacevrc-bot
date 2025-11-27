@@ -5,10 +5,10 @@
  */
 
 const DISCORD_SERVER_SETTINGS = {
-    VERIFICATION_ROLE: 'verification-role',
-    VERIFICATION_PLUS_ROLE: 'verification-plus-role',
-    VERIFICATION_CHANNEL: 'verification-channel',
-    AUTO_NICKNAME: 'auto-nickname',
+    VERIFICATION_ROLE: 'verification_role',
+    VERIFICATION_PLUS_ROLE: 'verification_plus_role',
+    VERIFICATION_CHANNEL: 'verification_channel',
+    AUTO_NICKNAME: 'auto_nickname',
 }
 
 module.exports = DISCORD_SERVER_SETTINGS;

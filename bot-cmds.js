@@ -15,13 +15,16 @@ const { readdirSync } = require("node:fs");
 const { join } = require("node:path");
 
 // Project Modules
-const { DISCORD_TOKEN, DISCORD_CLIENT_ID } = require("./src/env");
+const { DISCORD_TOKEN, DISCORD_CLIENT_ID, D1_PRIVATE_KEY, VRCHAT_APPLICATION_NAME } = require("./src/env");
 const PrintMessage = require("./src/print");
 const { exit } = require("node:process");
+const { D1Class } = require("./src/d1class");
 
 // =================================================================================================
 // Command Deployment
 // =================================================================================================
+
+D1Class.init({ apiKey: D1_PRIVATE_KEY })
 
 const commandsToDeploy = [];
 
@@ -57,6 +60,31 @@ const rest = new REST().setToken(DISCORD_TOKEN);
             Routes.applicationCommands(DISCORD_CLIENT_ID),
             { body: commandsToDeploy }
         );
+
+        const userRequestData = {
+            discord_id: DISCORD_CLIENT_ID,
+            discord_name: VRCHAT_APPLICATION_NAME
+        }
+
+        /**
+         * List all Discord servers where the bot is installed
+         * @returns {Promise<Array<Object>>} Array of Discord servers
+         * @returns {string} discordServers[].discord_server_id - The Discord server ID
+         * @returns {string} discordServers[].discord_server_name - The Discord server name
+         */
+        const discordServers = await D1Class.listDiscordServers(userRequestData);
+
+        for (const server of discordServers) {
+            try {
+                await rest.put(
+                    Routes.applicationGuildCommands(DISCORD_CLIENT_ID, server.discord_server_id),
+                    { body: commandsToDeploy }
+                );
+                PrintMessage(`Comandos registrados en servidor: ${server.discord_server_name}`);
+            } catch (error) {
+                PrintMessage(`[ERROR] No se pudieron registrar comandos en ${server.discord_server_name}: ${error.message}`);
+            }
+        }
 
         PrintMessage(`Comandos registrados correctamente: ${globalData.length}`);
         exit(0);

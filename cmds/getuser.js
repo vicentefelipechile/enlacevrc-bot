@@ -91,7 +91,7 @@ const displayProfile = (profile) => {
 /**
  * Main function to get user information
  */
-const GetUser = async () => {
+(async () => {
   try {
     // Initialize D1Class if not already initialized
     if (!D1Class.apiKey) {
@@ -148,7 +148,4 @@ const GetUser = async () => {
   } catch (error) {
     PrintMessage(`❌ Error durante la búsqueda del usuario: ${error.message}`);
   }
-};
-
-// Execute main function
-GetUser();
+})();

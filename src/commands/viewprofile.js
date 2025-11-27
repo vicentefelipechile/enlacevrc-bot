@@ -8,7 +8,7 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { Locale, EmbedBuilder, ApplicationCommandOptionType, MessageFlags } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const GetRandomColor = require("../randomcolor");
 const { DISCORD_CLIENT_ID } = require("../env");
@@ -53,16 +53,22 @@ viewProfileCommand.setLocalizationPhrases({
         'error.same_user': 'You cannot view your own profile with this command. Use `/{command}` instead.',
         'error.is_the_bot': 'You cannot view the bot\'s profile. It is personality-less!',
         'error.is_bot': 'Discord Bots don\'t have VRChat profiles to view!',
-        'embed.title': '{displayName} - VRChat Profile',
-        'embed.description': '**Biography**:\n{bio}',
-        'embed.status': 'Status:',
-        'embed.status.nostatus': 'No status',
-        'embed.pronouns': 'Pronouns:',
-        'embed.pronouns.nopronouns': 'Not specified',
-        'embed.verification_code_detected': 'I noticed that {target} still has the verification code {code} in their VRChat bio. Someone should let them know they can remove it since they are already verified.',
-        'embed.verification_data': 'Verification Data',
-        'embed.verification_data.by': 'Verified by <@{discord_id}>',
         'success': 'Showing {target}\'s VRChat profile:',
+        'button.view_profile': 'View Profile',
+        'button.view_personality': 'View Personality',
+        'embed.nostatus': 'No status',
+        'embed.nopronouns': 'Not specified',
+        'embed.verification_code_detected': 'I noticed that you still have the code {code} in your VRChat biography. Once verified, there is no need to keep it there.',
+        'embed.verification_by': 'Verified by <@{discord_id}>',
+        'embed.body':
+            `# [{profile_name}]({profile_url})` +
+            `\n` +
+            `\n## Biography` +
+            `\n` +
+            `\n{profile_bio}` +
+            `\n` +
+            `\n**Status**: {profile_status}` +
+            `\n**Pronouns**: {profile_wokestuff}`,
     },
     [Locale.SpanishLATAM]: {
         'title': 'Visor de Perfil de VRChat',
@@ -73,36 +79,48 @@ viewProfileCommand.setLocalizationPhrases({
         'error.same_user': 'No puedes ver tu propio perfil con este comando. Usa `/{command}` en su lugar.',
         'error.is_the_bot': 'No puedes ver el perfil del bot. ¡No tiene personalidad!',
         'error.is_bot': '¡Los bots de Discord no tienen perfiles de VRChat para ver!',
-        'embed.title': '{displayName} - Perfil de VRChat',
-        'embed.description': '**Biografía**:\n{bio}',
-        'embed.status': 'Estado:',
-        'embed.status.nostatus': 'Sin estado',
-        'embed.pronouns': 'Pronombres:',
-        'embed.pronouns.nopronouns': 'No especificado',
-        'embed.verification_code_detected': 'He notado que {target} aún tiene el código de verificación {code} en su biografía de VRChat. Alguien debería avisarle que puede eliminarlo ya que está verificado.',
-        'embed.verification_data': 'Datos de Verificación',
-        'embed.verification_data.by': 'Verificador por <@{discord_id}>',
         'success': 'Mostrando el perfil de VRChat de {target}:',
+        'button.view_profile': 'Ver perfil',
+        'button.view_personality': 'Ver personalidad',
+        'embed.nostatus': 'Sin estado',
+        'embed.nopronouns': 'No especificado',
+        'embed.verification_code_detected': 'He notado que aún tienes el código {code} en tu biografía de VRChat. Una vez verificado no hace falta mantenerlo.',
+        'embed.verification_by': 'Verificador por <@{discord_id}>',
+        'embed.body':
+            `# [{profile_name}]({profile_url})` +
+            `\n` +
+            `\n## Biografia` +
+            `\n` +
+            `\n{profile_bio}` +
+            `\n` +
+            `\n**Estado**: {profile_status}` +
+            `\n**Pronombres**: {profile_wokestuff}`,
     },
     [Locale.SpanishES]: {
-        "title": "Cotilleador de Perfiles de VRChat",
-        "description": "Para echarle un ojo al perfil de VRChat de otro pavo, siempre y cuando esté verificado.",
-        "error.not_verified_user": "¡Eh, para el carro! Este tío no está verificado. Que se vincule la cuenta de VRChat con el comando `/verification` antes de nada.",
-        "error.not_found_user": "Pero madre mía Willy, que no encuentro el perfil de este personaje. A lo mejor lo ha borrado o la API de VRChat está haciendo de las suyas.",
-        "error.general": "¡Mecachis la mar! Algo ha petado al intentar pillar el perfil. Anda, prueba otra vez en un ratico, ¡a tope con la cope!",
-        "error.same_user": "¡Pero hombre! No puedes cotillear tu propio perfil con esto. Para eso usa `/{command}`, ¡no seas melón!",
-        "error.is_the_bot": "¡Compañero! ¿Pero cómo vas a ver el perfil del bot? ¡Si no tiene ni media neurona, me cago en la leche!",
-        "error.is_bot": "¡Los bots de Discord no tienen perfiles de VRChat para cotillear, alma de cántaro!",
-        "embed.title": "El Perfil de {displayName} en VRChat",
-        "embed.description": "**Su vida y milagros**:\n{bio}",
-        "embed.status": "Está:",
-        "embed.status.nostatus": "No ha puesto ná",
-        "embed.pronouns": "Sus pronombres:",
-        "embed.pronouns.nopronouns": "A saber",
-        "embed.verification_code_detected": "Oye, que me he fijado que {target} todavía tiene el código de marras {code} en su biografía. Que alguien le dé un toque y le diga que lo quite, que ya está más que verificado.",
-        "embed.verification_data": "Datos de la Verificación, ¡pa que lo sepas!",
-        "embed.verification_data.by": "Verificado por el colega <@{discord_id}>",
-        "success": "¡Dale, dale! Aquí tienes el perfil de {target} para que cotillees a gusto, ¡qué fiera, qué máquina!"
+        'title': 'Cotilleador de Perfiles de VRChat',
+        'description': 'Para echarle un ojo al perfil de VRChat de otro pavo, siempre y cuando esté verificado.',
+        'error.not_verified_user': '¡Eh, para el carro! Este tío no está verificado. Que se vincule la cuenta de VRChat con el comando `/verification` antes de nada.',
+        'error.not_found_user': 'Pero madre mía Willy, que no encuentro el perfil de este personaje. A lo mejor lo ha borrado o la API de VRChat está haciendo de las suyas.',
+        'error.general': '¡Mecachis la mar! Algo ha petado al intentar pillar el perfil. Anda, prueba otra vez en un ratico, ¡a tope con la cope!',
+        'error.same_user': '¡Pero hombre! No puedes cotillear tu propio perfil con esto. Para eso usa `/{command}`, ¡no seas melón!',
+        'error.is_the_bot': '¡Compañero! ¿Pero cómo vas a ver el perfil del bot? ¡Si no tiene ni media neurona, me cago en la leche!',
+        'error.is_bot': '¡Los bots de Discord no tienen perfiles de VRChat para cotillear, alma de cántaro!',
+        'success': '¡Dale, dale! Aquí tienes el perfil de {target} para que cotillees a gusto, ¡qué fiera, qué máquina!',
+        'button.view_profile': 'Ver perfil',
+        'button.view_personality': 'Ver personalidad',
+        'embed.nostatus': 'Sin estado',
+        'embed.nopronouns': 'No especificao',
+        'embed.verification_code_detected': '¡Oye, mira que eres lerdo! Que aún llevas el código {code} en la biografía de VRChat. Una vez verificao, quítate eso del medio, que ocupa.',
+        'embed.verification_by': 'Verificao por <@{discord_id}>',
+        'embed.body':
+            `# [{profile_name}]({profile_url})` +
+            `\n` +
+            `\n## La flipante vida del colega` +
+            `\n` +
+            `\n{profile_bio}` +
+            `\n` +
+            `\n**Estado**: {profile_status}` +
+            `\n**Pronombres**: {profile_wokestuff}`,
     }
 });
 
@@ -181,8 +199,9 @@ viewProfileCommand.setExecute(async ({ interaction, locale, args }) => {
         }
 
         await interaction.editReply({
-            content: responseMessage,
-            embeds: [profileEmbed],
+            // content: responseMessage,
+            components: [profileEmbed],
+            flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
         });
 
     } catch (error) {

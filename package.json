@@ -14,6 +14,7 @@
     "adduser": "node cmds/adduser.js",
     "getuser": "node cmds/getuser.js",
     "deluser": "node cmds/deluser.js",
+    "liststaff": "node cmds/liststaff.js",
     "deploy-commands": "node bot-cmds.js"
   },
   "type": "commonjs"

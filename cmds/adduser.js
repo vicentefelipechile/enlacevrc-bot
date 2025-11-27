@@ -44,7 +44,7 @@ const isValidVRChatId = (vrchatId) => {
 /**
  * Main function to add user
  */
-const AddUser = async () => {
+(async () => {
   try {
     // Initialize D1Class if not already initialized
     if (!D1Class.apiKey) {
@@ -129,7 +129,4 @@ const AddUser = async () => {
   } catch (error) {
     PrintMessage(`❌ Error durante la adición del usuario: ${error.message}`);
   }
-};
-
-// Execute main function
-AddUser();
+})();

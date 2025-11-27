@@ -73,7 +73,7 @@ const confirmAction = async (message) => {
 /**
  * Main function to delete user
  */
-const DeleteUser = async () => {
+(async () => {
   try {
     // Initialize D1Class if not already initialized
     if (!D1Class.apiKey) {
@@ -170,7 +170,4 @@ const DeleteUser = async () => {
     PrintMessage(`❌ Error durante la eliminación del usuario: ${error.message}`);
     exit(1);
   }
-};
-
-// Execute main function
-DeleteUser();
+})();
