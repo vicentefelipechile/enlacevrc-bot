@@ -9,7 +9,7 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, Colors } = require("discord.js");
+const { Locale, EmbedBuilder, Colors, PermissionsBitField } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const { D1Class } = require("../d1class");
 const DISCORD_SERVER_SETTINGS = require("../discordsettings");
@@ -45,6 +45,10 @@ syncCommand.setLocalizationPhrases({
         'log.role_fail': 'Failed to add role {role}: {error}',
         'log.nickname_fail': 'Failed to update nickname: {error}',
         'log.plus_role_fail': 'Failed to add plus role {role}: {error}',
+        'error.bot_no_perm': 'I do not have the "Manage Roles" permission.',
+        'error.role_hierarchy': 'I cannot assign role {role} because it is higher than my highest role.',
+        'solution.bot_no_perm': 'Please ensure I have the "Manage Roles" permission in the server settings.',
+        'solution.role_hierarchy': 'Please move my role above the {role} role in the server settings.',
     },
     [Locale.SpanishLATAM]: {
         'error.no_profile': 'No tienes un perfil de VRChat vinculado. Por favor, usa `/verification` primero.',
@@ -58,6 +62,10 @@ syncCommand.setLocalizationPhrases({
         'log.role_fail': 'No se pudo añadir el rol {role}: {error}',
         'log.nickname_fail': 'No se pudo actualizar el apodo: {error}',
         'log.plus_role_fail': 'No se pudo añadir el rol 18+: {error}',
+        'error.bot_no_perm': 'No tengo el permiso "Gestionar Roles".',
+        'error.role_hierarchy': 'No puedo asignar el rol {role} porque es superior a mi rol más alto.',
+        'solution.bot_no_perm': 'Por favor, asegúrate de que tengo el permiso "Gestionar Roles" en la configuración del servidor.',
+        'solution.role_hierarchy': 'Por favor, mueve mi rol por encima del rol {role} en la configuración del servidor.',
     },
     [Locale.SpanishES]: {
         'error.no_profile': '¡Que no tienes perfil vinculado, alma de cántaro! Usa `/verification` antes.',
@@ -71,6 +79,10 @@ syncCommand.setLocalizationPhrases({
         'log.role_fail': '¡Ostras! No he podido ponerte el rol {role}: {error}',
         'log.nickname_fail': '¡Joder! No he podido cambiarte el apodo: {error}',
         'log.plus_role_fail': '¡Joder! No he podido ponerte el rol 18+: {error}',
+        'error.bot_no_perm': 'No tengo permisos para gestionar roles, ¿qué te crees?',
+        'error.role_hierarchy': 'El rol {role} está por encima de mí, no puedo dártelo.',
+        'solution.bot_no_perm': 'Dame permisos de "Gestionar Roles" o no hacemos nada.',
+        'solution.role_hierarchy': 'Sube mi rol por encima de {role}, que si no, no llego.',
     }
 });
 
@@ -110,6 +122,16 @@ syncCommand.setExecute(async ({ interaction, locale }) => {
     const guildId = interaction.guild.id;
     const settings = await D1Class.getAllDiscordSettings(userRequestData, guildId);
     const member = interaction.member;
+    const botMember = interaction.guild.members.me;
+
+    // Check for Manage Roles permission
+    if (!botMember.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+        const embed = new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setTitle(locale['error.bot_no_perm'])
+            .setDescription(locale['solution.bot_no_perm']);
+        return interaction.editReply({ embeds: [embed] });
+    }
 
     const changes = {
         rolesAdded: [],
@@ -122,14 +144,23 @@ syncCommand.setExecute(async ({ interaction, locale }) => {
     if (verificationRoleId) {
         const role = interaction.guild.roles.cache.get(verificationRoleId);
         if (role && !member.roles.cache.has(verificationRoleId)) {
-            try {
-                await member.roles.add(role);
-                changes.rolesAdded.push(role.toString());
-            } catch (error) {
+            if (botMember.roles.highest.position > role.position) {
+                try {
+                    await member.roles.add(role);
+                    changes.rolesAdded.push(role.toString());
+                } catch (error) {
+                    const embed = new EmbedBuilder()
+                        .setColor(Colors.Red)
+                        .setTitle(locale['log.role_fail'].replace('{role}', role.name).replace('{error}', error.message || error))
+                        .setDescription(String(error));
+                    return await interaction.editReply({ embeds: [embed] });
+                }
+            } else {
+                // Fallback/Check: Role hierarchy issue
                 const embed = new EmbedBuilder()
                     .setColor(Colors.Red)
-                    .setTitle(locale['log.role_fail'])
-                    .setDescription(error);
+                    .setTitle(locale['error.role_hierarchy'].replace('{role}', role.name))
+                    .setDescription(locale['solution.role_hierarchy'].replace('{role}', role.name));
                 return await interaction.editReply({ embeds: [embed] });
             }
         }
@@ -162,14 +193,23 @@ syncCommand.setExecute(async ({ interaction, locale }) => {
         if (verificationPlusRoleId) {
             const role = interaction.guild.roles.cache.get(verificationPlusRoleId);
             if (role && !member.roles.cache.has(verificationPlusRoleId)) {
-                try {
-                    await member.roles.add(role);
-                    changes.rolesAdded.push(role.toString());
-                } catch (error) {
+                if (botMember.roles.highest.position > role.position) {
+                    try {
+                        await member.roles.add(role);
+                        changes.rolesAdded.push(role.toString());
+                    } catch (error) {
+                        const embed = new EmbedBuilder()
+                            .setColor(Colors.Red)
+                            .setTitle(locale['log.plus_role_fail'].replace('{role}', role.name).replace('{error}', error.message || error))
+                            .setDescription(String(error));
+                        return await interaction.editReply({ embeds: [embed] });
+                    }
+                } else {
+                    // Fallback/Check: Role hierarchy issue
                     const embed = new EmbedBuilder()
                         .setColor(Colors.Red)
-                        .setTitle(locale['log.role_fail'])
-                        .setDescription(error);
+                        .setTitle(locale['error.role_hierarchy'].replace('{role}', role.name))
+                        .setDescription(locale['solution.role_hierarchy'].replace('{role}', role.name));
                     return await interaction.editReply({ embeds: [embed] });
                 }
             }

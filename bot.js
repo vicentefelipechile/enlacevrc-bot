@@ -21,6 +21,7 @@ const { DISCORD_TOKEN } = require("./src/env");
 const PrintMessage = require("./src/print");
 const { D1Class } = require("./src/d1class");
 const env = require("./src/env");
+const { OnServerAdded } = require("./src/events/guildCreate");
 
 D1Class.init({ apiKey: env.D1_PRIVATE_KEY });
 
@@ -63,7 +64,7 @@ for (const cmd of commands) {
 
 client.on(Events.InteractionCreate, ModularCommandHandler(client));
 
-// client.on(Events.GuildCreate, OnServerAdded);
+client.on(Events.GuildCreate, OnServerAdded);
 
 client.once(Events.ClientReady, async () => {
     PrintMessage(`Logged in as ${client.user.tag}`);
