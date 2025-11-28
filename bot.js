@@ -21,7 +21,6 @@ const { DISCORD_TOKEN } = require("./src/env");
 const PrintMessage = require("./src/print");
 const { D1Class } = require("./src/d1class");
 const env = require("./src/env");
-// const OnServerAdded = require("./src/events/onserverjoined");
 
 D1Class.init({ apiKey: env.D1_PRIVATE_KEY });
 

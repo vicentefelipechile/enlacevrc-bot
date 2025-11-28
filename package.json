@@ -15,7 +15,9 @@
     "getuser": "node cmds/getuser.js",
     "deluser": "node cmds/deluser.js",
     "liststaff": "node cmds/liststaff.js",
-    "deploy-commands": "node bot-cmds.js"
+    "deploy-commands": "node bot-cmds.js",
+    "addstaff": "node cmds/addstaff.js",
+    "removestaff": "node cmds/removestaff.js"
   },
   "type": "commonjs"
 }
