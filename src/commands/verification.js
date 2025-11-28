@@ -12,7 +12,6 @@
 const { Locale, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, Colors, AttachmentBuilder, ApplicationCommandOptionType, ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const NodeCache = require("node-cache");
-const DISCORD_SERVER_SETTINGS = require("../discordsettings");
 const { D1Class } = require("../d1class");
 const { generateCodeByVRChat, getVRChatId } = require("../util/vrchatcode");
 const { VRCHAT_CLIENT } = require("../vrchat");
@@ -178,8 +177,17 @@ const buttonVerify = verificationCommand.addButton('verify', async ({ interactio
             .setEmoji('✅')
             .setDisabled(true);
 
-        interaction.member.setNickname(vrchatData.displayName)
-            
+        const settings = await D1Class.getAllDiscordSettings(userRequestData, interaction.guild.id);
+
+        if (settings.auto_nickname === '1') {
+            interaction.member.setNickname(vrchatData.displayName)
+        }
+
+        const verificationRole = interaction.guild.roles.cache.get(settings.verification_role);
+        if (verificationRole) {
+            interaction.member.roles.add(verificationRole);
+        }
+
         await interaction.editReply({
             content: locale['success'],
             embeds: [],
@@ -268,27 +276,27 @@ buttonCancel.getButton().setStyle(ButtonStyle.Secondary).setEmoji('⏹️');
 const buttonVerifyProfile = verificationCommand.addButton('profile', async ({ interaction, locale }) => {
     await interaction.deferUpdate();
 
-        const videoComponent = new ContainerBuilder()
-            .setAccentColor(Colors.Aqua)
-            .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(locale['verify.description'])
-            )
-            .addMediaGalleryComponents(
-                new MediaGalleryBuilder().addItems({
-                    media: {
-                        url: 'attachment://' + commandVerifyVideo.name,
-                    }
-                })
-            )
-            .addActionRowComponents(
-                new ActionRowBuilder().addComponents(goToVRChatButton.setLabel(locale['verify.gotovrchat']))
-            );
+    const videoComponent = new ContainerBuilder()
+        .setAccentColor(Colors.Aqua)
+        .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(locale['verify.description'])
+        )
+        .addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems({
+                media: {
+                    url: 'attachment://' + commandVerifyVideo.name,
+                }
+            })
+        )
+        .addActionRowComponents(
+            new ActionRowBuilder().addComponents(goToVRChatButton.setLabel(locale['verify.gotovrchat']))
+        );
 
-        await interaction.editReply({
-            flags: MessageFlags.IsComponentsV2,
-            components: [videoComponent],
-            files: [commandVerifyVideo],
-        });
+    await interaction.editReply({
+        flags: MessageFlags.IsComponentsV2,
+        components: [videoComponent],
+        files: [commandVerifyVideo],
+    });
 });
 
 buttonVerifyProfile.getButton().setStyle(ButtonStyle.Primary).setEmoji('🔗');

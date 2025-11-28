@@ -8,11 +8,10 @@
 // Import Statements
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ApplicationCommandOptionType, PermissionFlagsBits, Colors } = require("discord.js");
+const { Locale, EmbedBuilder, ApplicationCommandOptionType, PermissionFlagsBits, Colors, MessageFlags } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const DISCORD_SERVER_SETTINGS = require("../discordsettings");
-const PrintMessage = require("../print");
-const { D1Class } = require("../class/db");
+const { D1Class } = require("../d1class");
 
 // =================================================================================================
 // Variables
@@ -21,14 +20,11 @@ const { D1Class } = require("../class/db");
 const settingsCommand = new ModularCommand('settings')
     .setDescription('Configure bot settings for this server.')
     .setCooldown(5)
-    .setPermissionCheck((interaction) => {
-        return interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
-    });
+    .setPermissionCheck(i => i.member.permissions.has(PermissionFlagsBits.ManageGuild));
 
 const SUBCOMMANDS_NAME = {
     VERIFICATION_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE,
     VERIFICATION_PLUS_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE,
-    VERIFICATION_CHANNEL: DISCORD_SERVER_SETTINGS.VERIFICATION_CHANNEL,
     AUTO_NICKNAME: DISCORD_SERVER_SETTINGS.AUTO_NICKNAME,
     VIEW: 'view',
     RESET: 'reset'
@@ -59,19 +55,6 @@ settingsCommand.addSubCommand({
             name: 'role',
             description: 'The role to assign to 18+ verified users',
             type: ApplicationCommandOptionType.Role,
-            required: true
-        }
-    ]
-});
-
-settingsCommand.addSubCommand({
-    name: SUBCOMMANDS_NAME.VERIFICATION_CHANNEL,
-    description: 'Set the channel where verification commands are allowed',
-    options: [
-        {
-            name: 'channel',
-            description: 'The channel for verification commands',
-            type: ApplicationCommandOptionType.Channel,
             required: true
         }
     ]
@@ -213,11 +196,6 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role`]: 'Role',
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role.description`]: 'The role to assign to 18+ verified users',
 
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: 'Channel for Verification',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.description`]: 'Set the channel where verification commands are allowed',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel`]: 'Channel',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: 'The channel for verification commands',
-
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}`]: 'Auto Nickname Update',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.description`]: 'Enable or disable automatic nickname updates for new members',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: 'Enable Auto Nickname',
@@ -249,11 +227,6 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role`]: 'Rol',
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role.description`]: 'El rol que se asignará a los usuarios verificados +18',
 
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: 'Canal de Verificación',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.description`]: 'Establece el canal donde se permiten los comandos de verificación',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel`]: 'Canal',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: 'El canal para los comandos de verificación',
-
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}`]: 'Actualización Automática de Apodo',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.description`]: 'Habilita o deshabilita las actualizaciones automáticas de apodo para nuevos miembros',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: 'Habilitar Apodo Automático',
@@ -284,11 +257,6 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.description`]: 'Aquí pones el rol para los mayores de edad verificados, que ya son mayorcitos',
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role`]: 'El Rol de adultos',
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.role.description`]: '¡Joder tío! El rol para los usuarios +18 verificados, que no son críos',
-
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}`]: '¡Tío! El canal de verificación',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.description`]: 'Aquí dices en qué canal se pueden usar los comandos de verificación, figura',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel`]: 'El Canal ese',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_CHANNEL}.channel.description`]: '¡Hostia colega! Selecciona el canal donde se podrá verificar la peña',
 
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}`]: '¡Qué fuerte! Apodo automático',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.description`]: 'Activa o desactiva que se cambien los apodos solos a los nuevos, que mola un huevo',
@@ -348,8 +316,8 @@ function formatChannel(channelId, guild, locale) {
  * @returns {string} - Formatted boolean value
  */
 function formatBoolean(value, locale) {
-    if (value === 'true') return locale['view.enabled'];
-    if (value === 'false') return locale['view.disabled'];
+    if (value === '1') return locale['view.enabled'];
+    if (value === '0') return locale['view.disabled'];
     return locale['view.not_set'];
 }
 
@@ -358,175 +326,120 @@ function formatBoolean(value, locale) {
 // =================================================================================================
 
 settingsCommand.setExecute(async ({ interaction, locale, args }) => {
+    await interaction.deferReply();
+
+    const serverId = interaction.guild.id;
+    const subcommand = args['subcommand'];
+
+    const userRequestData = {
+        discord_id: interaction.user.id,
+        discord_name: interaction.user.username,
+    }
+
     try {
-        await interaction.deferReply();
-
-        const serverId = interaction.guild.id;
-        const subcommand = args['subcommand'];
-
-        const settingsExist = await DiscordSettings.exists(serverId);
-        if (!settingsExist) {
-            const result = DiscordSettings.registerSettings({
-                [SUBCOMMANDS_NAME.VERIFICATION_ROLE]: null,
-                [SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE]: null,
-                [SUBCOMMANDS_NAME.VERIFICATION_CHANNEL]: null,
-                [SUBCOMMANDS_NAME.AUTO_NICKNAME]: false
-            });
-
-            PrintMessage(`Default settings registered for server: ${interaction.guild.name} - ${JSON.stringify(result)}`);
-            return await interaction.editReply({
-                content: locale['success.settings_registered'],
-                embeds: []
-            });
-        }
-
         switch (subcommand) {
             case SUBCOMMANDS_NAME.VERIFICATION_ROLE: {
                 const role = args['role'];
-                const success = await DiscordSettings.add(serverId, SUBCOMMANDS_NAME.VERIFICATION_ROLE, role.id);
-                
-                if (success) {
-                    await interaction.editReply({
-                        content: locale['success.verification_role'].replace('{role}', `<@&${role.id}>`),
-                        embeds: []
-                    });
-                } else {
-                    await interaction.editReply({
-                        content: locale['error.setting_failed'],
-                        embeds: []
-                    });
-                }
+
+                await D1Class.updateDiscordSetting(userRequestData, serverId, SUBCOMMANDS_NAME.VERIFICATION_ROLE, role.id);
+                await interaction.editReply({
+                    content: locale['success.verification_role'].replace('{role}', `<@&${role.id}>`),
+                    embeds: [],
+                    flags: MessageFlags.SuppressNotifications
+                });
                 break;
             }
 
             case SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE: {
                 const role = args['role'];
-                const success = await DiscordSettings.add(serverId, SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE, role.id);
-
-                if (success) {
-                    await interaction.editReply({
-                        content: locale['success.verification_plus_role'].replace('{role}', `<@&${role.id}>`),
-                        embeds: []
-                    });
-                } else {
-                    await interaction.editReply({
-                        content: locale['error.setting_failed'],
-                        embeds: []
-                    });
-                }
-                break;
-            }
-
-            case SUBCOMMANDS_NAME.VERIFICATION_CHANNEL: {
-                const channel = args['channel'];
-                const success = await DiscordSettings.add(serverId, SUBCOMMANDS_NAME.VERIFICATION_CHANNEL, channel.id);
-                
-                if (success) {
-                    await interaction.editReply({
-                        content: locale['success.verification_channel'].replace('{channel}', `<#${channel.id}>`),
-                        embeds: []
-                    });
-                } else {
-                    await interaction.editReply({
-                        content: locale['error.setting_failed'],
-                        embeds: []
-                    });
-                }
+                await D1Class.updateDiscordSetting(userRequestData, serverId, SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE, role.id);
+                await interaction.editReply({
+                    content: locale['success.verification_plus_role'].replace('{role}', `<@&${role.id}>`),
+                    embeds: [],
+                    flags: MessageFlags.SuppressNotifications
+                });
                 break;
             }
 
             case SUBCOMMANDS_NAME.AUTO_NICKNAME: {
                 const enabled = args['enabled'];
-                const success = await DiscordSettings.add(serverId, SUBCOMMANDS_NAME.AUTO_NICKNAME, enabled.toString());
-                
-                if (success) {
-                    const status = locale[enabled ? 'status.enabled' : 'status.disabled'];
-                    await interaction.editReply({
-                        content: locale['success.auto_nickname'].replace('{status}', status),
-                        embeds: []
-                    });
-                } else {
-                    await interaction.editReply({
-                        content: locale['error.setting_failed'],
-                        embeds: []
-                    });
-                }
+                await D1Class.updateDiscordSetting(userRequestData, serverId, SUBCOMMANDS_NAME.AUTO_NICKNAME, enabled.toString());
+                await interaction.editReply({
+                    content: locale['success.auto_nickname'].replace('{status}', status),
+                    embeds: [],
+                    flags: MessageFlags.SuppressNotifications
+                });
                 break;
             }
 
             case SUBCOMMANDS_NAME.VIEW: {
-                const settings = await DiscordSettings.getAll(serverId);
-                
+                const settings = await D1Class.getAllDiscordSettings(userRequestData, serverId);
+
                 const embed = new EmbedBuilder()
                     .setColor(Colors.Blue)
                     .setTitle(locale['view.title'].replace('{serverName}', interaction.guild.name))
                     .setDescription(locale['view.description'])
                     .addFields(
                         {
-                            name: locale['view.verified_role'],
-                            value: formatRole(settings?.verified_role, interaction.guild, locale),
-                            inline: true
+                            name: locale['view.verification_role'],
+                            value: formatRole(settings[SUBCOMMANDS_NAME.VERIFICATION_ROLE], interaction.guild, locale),
+                            inline: false
                         },
                         {
-                            name: locale['view.verified_18_role'],
-                            value: formatRole(settings?.verified_18_role, interaction.guild, locale),
-                            inline: true
+                            name: locale['view.verification_plus_role'],
+                            value: formatRole(settings[SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE], interaction.guild, locale),
+                            inline: false
                         },
                         {
                             name: locale['view.auto_nickname'],
-                            value: formatBoolean(settings?.auto_nickname, locale),
-                            inline: true
+                            value: formatBoolean(settings[SUBCOMMANDS_NAME.AUTO_NICKNAME], locale),
+                            inline: false
                         }
                     )
-                    .setTimestamp();
+                    .setTimestamp()
+                    .setAuthor({
+                        name: interaction.guild.name,
+                        iconURL: interaction.guild.iconURL()
+                    });
 
                 await interaction.editReply({
                     content: '',
-                    embeds: [embed]
+                    embeds: [embed],
+                    flags: MessageFlags.SuppressNotifications
                 });
                 break;
             }
 
             case SUBCOMMANDS_NAME.RESET: {
                 const settingToReset = args['setting'];
-                
+
                 if (settingToReset === 'all') {
                     // Reset all settings by getting all and deleting each one
-                    const settings = await DiscordSettings.getAll(serverId);
-                    if (settings) {
-                        const settingKeys = Object.keys(settings);
-                        for (const key of settingKeys) {
-                            await DiscordSettings.delete(serverId, key);
-                        }
-                    }
-                    
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.AUTO_NICKNAME, '');
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE, '');
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE, '');
+
                     await interaction.editReply({
                         content: locale['success.reset_all'],
-                        embeds: []
+                        embeds: [],
+                        flags: MessageFlags.SuppressNotifications
                     });
                 } else {
-                    const success = await DiscordSettings.delete(serverId, settingToReset);
-                    
-                    if (success) {
-                        await interaction.editReply({
-                            content: locale['success.reset'].replace('{setting}', settingToReset),
-                            embeds: []
-                        });
-                    } else {
-                        await interaction.editReply({
-                            content: locale['error.not_found'],
-                            embeds: []
-                        });
-                    }
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, settingToReset, '');
+
+                    await interaction.editReply({
+                        content: locale['success.reset'].replace('{setting}', settingToReset),
+                        embeds: [],
+                        flags: MessageFlags.SuppressNotifications
+                    });
                 }
                 break;
             }
         }
-
     } catch (error) {
-        console.error('Error in settings command:', error);
+        console.error(error);
         await interaction.editReply({
-            content: locale['error.general'],
+            content: locale['error.error'],
             embeds: []
         });
     }

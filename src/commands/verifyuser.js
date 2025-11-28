@@ -19,29 +19,9 @@ const { D1Class } = require("../d1class");
 // Variables
 // =================================================================================================
 
-const ONLY_ALLOWED = [
-    '12345',
-    '67890',
-]
-
-const verificationPlusCommand = new ModularCommand('verificationplus')
+const verificationPlusCommand = new ModularCommand('verifyuser')
     .setDescription('Verify a user for +18 access (Moderator only).')
-    .setCooldown(5)
-    .setPermissionCheck(async (interaction) => {
-        let exists = false;
-        try {
-            const staff = await D1Class.getStaff({
-                discord_id: interaction.user.id,
-                discord_name: interaction.user.username
-            }, interaction.user.id);
-
-            exists = staff !== null;
-        } catch (error) {
-            exists = false;
-        }
-
-        return exists;
-    });
+    .setCooldown(5);
 
 verificationPlusCommand.addOption({
     name: 'user',
@@ -95,8 +75,8 @@ verificationPlusCommand.setLocalizationPhrases({
         'success.title': '✅ User Verified for +18 Access',
         'success.description': 'Successfully verified **{username}** for +18 access and assigned the role.',
         'success.footer': 'Verification completed by {moderator}',
-        'weird.role_but_not_verified.title': '❓ Weird State Detected',
-        'weird.role_but_not_verified': 'User has the +18 verification role but is not marked as verified in the database. Removing role...',
+        'success_already.title': '✅ User Already Verified for +18 Access',
+        'success_already.description': 'The user **{username}** is already verified for +18 access and now has the role.',
     },
     [Locale.SpanishLATAM]: {
         'error.access_denied_title': '❌ Acceso Denegado',
@@ -120,8 +100,8 @@ verificationPlusCommand.setLocalizationPhrases({
         'success.title': '✅ Usuario Verificado para Acceso +18',
         'success.description': 'Se verificó exitosamente a **{username}** para acceso +18 y se asignó el rol.',
         'success.footer': 'Verificación completada por {moderator}',
-        'weird.role_but_not_verified.title': '❓ Estado Raro Detectado',
-        'weird.role_but_not_verified': 'El usuario tiene el rol de verificación +18 pero no está marcado como verificado en la base de datos. Eliminando rol...',
+        'success_already.title': '✅ Usuario ya esta verificado para el Acceso +18',
+        'success_already.description': 'El usuario **{username}** ya está verificado para el Acceso +18, se le ha dado el rol.',
     },
     [Locale.SpanishES]: {
         'error.access_denied_title': '❌ ¡Acceso Denegado, Tío!',
@@ -145,10 +125,30 @@ verificationPlusCommand.setLocalizationPhrases({
         'success.title': '✅ ¡Tío Verificao Pa los +18, Olé!',
         'success.description': '¡Vaya! ¡Ostras, chaval! Se verificó exitosamente a **{username}** pa acceso +18 y se le asignó el rol, ¡qué bien, eh!',
         'success.footer': '¡Verificación completá por {moderator}, joder, que bien! ¡Olé!',
-        'weird.role_but_not_verified.title': '❓ Un Estado Raro, ¡Qué Cosa Más Rara!',
-        'weird.role_but_not_verified': '¡Ay, que vaya lío! El tío tiene el rol +18 pero no está verificao en la base de datos, ¡qué cosa tan rara! ¡Eliminando rol, macho!',
+        'success_already.title': '✅ ¡Tío Verificao Pa los +18, Olé!',
+        'success_already.description': '¡Vaya! ¡Ostras, chaval! Se verificó exitosamente a **{username}** pa acceso +18 y se le asignó el rol, ¡qué bien, eh!',
     },
 });
+
+// =================================================================================================
+// Permission Check
+// =================================================================================================
+
+async function CheckPermission(interaction) {
+    let exists = false;
+    try {
+        const staff = await D1Class.getStaff({
+            discord_id: interaction.user.id,
+            discord_name: interaction.user.username
+        }, interaction.user.id);
+
+        exists = staff !== null;
+    } catch (error) {
+        exists = false;
+    }
+
+    return exists;
+}
 
 // =================================================================================================
 // Command Logic
@@ -156,16 +156,41 @@ verificationPlusCommand.setLocalizationPhrases({
 
 verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
     await interaction.deferReply();
-    
+
+    // Permission check
+    const hasPermissions = await CheckPermission(interaction);
+    if (!hasPermissions) {
+        const embed = new EmbedBuilder()
+            .setTitle(locale['error.access_denied_title'])
+            .setDescription(locale['error.no_permission'])
+            .setColor(Colors.Red)
+            .setTimestamp();
+
+        return await interaction.editReply({ embeds: [embed] });
+    }
+
+    // Fetch target user
     const targetUser = args.user;
     const guildId = interaction.guild.id;
 
+    // Check if target user exists in the guild
+    const member = await interaction.guild.members.fetch(targetUser.id);
+    if (!member) {
+        const embed = new EmbedBuilder()
+            .setTitle(locale['error.user_not_found_title'])
+            .setDescription(locale['error.user_not_found'])
+            .setColor(Colors.Red)
+            .setTimestamp();
+
+        return await interaction.editReply({ embeds: [embed] });
+    }
+
+    // Request user profile data
     const userRequestData = {
         discord_id: interaction.user.id,
         discord_name: interaction.user.username
     }
 
-    // Check if user profile exists in the system
     let profileData = null;
     try {
         profileData = await D1Class.getProfile(userRequestData, targetUser.id, false);
@@ -175,43 +200,30 @@ verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
             .setDescription(locale['error.user_not_verified'])
             .setColor(Colors.Red)
             .setTimestamp();
-        
+
         return await interaction.editReply({ embeds: [embed] });
     }
 
-    // Get server settings for verification role and +18 role
-    const verificationRoleId = await D1Class.getDiscordSetting(userRequestData, guildId, DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE);
-    const verificationPlusRoleId = await D1Class.getDiscordSetting(userRequestData, guildId, DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE);
+    // Getting server roles and settings
+    const settings = await D1Class.getAllDiscordSettings(userRequestData, guildId);
+    const verificationRoleId = settings[DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE];
+    const verificationPlusRoleId = settings[DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE];
 
-    // Get the guild member and check if they have verification role
-    const member = await interaction.guild.members.fetch(targetUser.id);
-    if (!member) {
+    await interaction.guild.roles.fetch();
+
+    // Verification Role
+    const verificationRole = interaction.guild.roles.cache.get(verificationRoleId);
+    if (!verificationRole) {
         const embed = new EmbedBuilder()
-            .setTitle(locale['error.user_not_found_title'])
-            .setDescription(locale['error.user_not_found'])
+            .setTitle(locale['error.role_not_found_title'])
+            .setDescription(locale['error.role_not_found'])
             .setColor(Colors.Red)
             .setTimestamp();
-        
+
         return await interaction.editReply({ embeds: [embed] });
     }
 
-    // Check if user has the basic verification role
-    if (
-        !verificationRoleId ||
-        typeof verificationRoleId !== 'string' ||
-        verificationRoleId.trim() === '' ||
-        !member.roles.cache.has(verificationRoleId)
-    ) {
-        const embed = new EmbedBuilder()
-            .setTitle(locale['error.missing_role_title'])
-            .setDescription(locale['error.user_no_role'])
-            .setColor(Colors.Red)
-            .setTimestamp();
-        
-        return await interaction.editReply({ embeds: [embed] });
-    }
-
-    // Check if the +18 role exists in the server
+    // Verification Plus Role
     const verificationPlusRole = interaction.guild.roles.cache.get(verificationPlusRoleId);
     if (!verificationPlusRole) {
         const embed = new EmbedBuilder()
@@ -219,29 +231,47 @@ verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
             .setDescription(locale['error.role_not_found'])
             .setColor(Colors.Red)
             .setTimestamp();
-        
+
         return await interaction.editReply({ embeds: [embed] });
     }
 
-    // Check if user already has the +18 role
-    if (member.roles.cache.has(verificationPlusRoleId)) {
+    const userWithVerificationRole = verificationRole.members.find(member => member.id === targetUser.id);
+    const userWithVerificationPlusRole = verificationPlusRole.members.find(member => member.id === targetUser.id);
+
+    // If the user has no verification role, then give it
+    if (userWithVerificationRole === undefined) {
+        await member.roles.add(verificationRoleId);
+    }
+
+    // If the user has verification plus role, but isn't not verified in DB, then remove it
+    if (userWithVerificationPlusRole !== undefined && !profileData.is_verified) {
+        await member.roles.remove(verificationPlusRoleId);
+    }
+
+    // If the user is verified in DB, but doesn't have verification plus role, then give it
+    if (userWithVerificationPlusRole === undefined && profileData.is_verified) {
+        await member.roles.add(verificationPlusRoleId);
+
         const embed = new EmbedBuilder()
-            .setTitle(locale['error.already_verified_title'])
-            .setDescription(locale['error.user_already_has_role'])
-            .setColor(Colors.Orange)
+            .setTitle(locale['success_already.title'])
+            .setDescription(locale['success_already.description'].replace('{username}', targetUser.displayName))
+            .setColor(RandomColor())
+            .setThumbnail(targetUser.displayAvatarURL())
+            .setFooter({
+                text: locale['success.footer'].replace('{moderator}', interaction.user.displayName),
+                iconURL: interaction.user.displayAvatarURL()
+            })
             .setTimestamp();
-        
+
         return await interaction.editReply({ embeds: [embed] });
     }
 
-    // Check has the role but is not marked as verified in DB (weird state)
-    if (!profileData.is_verified) {
-        await interaction.user.roles.remove(verificationPlusRoleId);
-
+    // If the user has verification plus role and is verified in DB, then do nothing
+    if (userWithVerificationPlusRole !== undefined && profileData.is_verified) {
         const embed = new EmbedBuilder()
             .setTitle(locale['error.already_verified_title'])
             .setDescription(locale['error.user_already_has_role'])
-            .setColor(Colors.Orange)
+            .setColor(Colors.Green)
             .setTimestamp();
 
         return await interaction.editReply({ embeds: [embed] });
@@ -250,36 +280,34 @@ verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
     // Assign the +18 role
     try {
         await member.roles.add(verificationPlusRoleId);
-        
+
         // Update profile to mark as 18+ verified if not already
-        if (!profileData.is_verified) {
-            await D1Class.verifyProfile(userRequestData, targetUser.id, {
-                verification_id: 1,
-                verified_from: guildId,
-            });
-        }
-        
+        await D1Class.verifyProfile(userRequestData, targetUser.id, {
+            verification_id: 1,
+            verified_from: guildId,
+        });
+
         // Success response
         const embed = new EmbedBuilder()
             .setTitle(locale['success.title'])
             .setDescription(locale['success.description'].replace('{username}', targetUser.displayName))
             .setColor(RandomColor())
             .setThumbnail(targetUser.displayAvatarURL())
-            .setFooter({ 
+            .setFooter({
                 text: locale['success.footer'].replace('{moderator}', interaction.user.displayName),
                 iconURL: interaction.user.displayAvatarURL()
             })
             .setTimestamp();
-        
+
         await interaction.editReply({ embeds: [embed] });
-        
+
     } catch (roleError) {
         const embed = new EmbedBuilder()
             .setTitle(locale['error.assignment_failed_title'])
             .setDescription(locale['error.failed_to_assign'])
             .setColor(Colors.Red)
             .setTimestamp();
-        
+
         await interaction.editReply({ embeds: [embed] });
     }
 });

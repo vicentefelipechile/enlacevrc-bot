@@ -86,7 +86,7 @@ const isValidVRChatId = (vrchatId) => {
 
     // Attempt to get existing profile
     PrintMessage('🔍 Verificando si el perfil ya existe...');
-    
+
     let existingProfile = null;
     try {
       existingProfile = await D1Class.getProfile(userRequestData, vrhcatId, false);
@@ -101,7 +101,7 @@ const isValidVRChatId = (vrchatId) => {
 
     // Create new profile
     PrintMessage('📝 Creando nuevo perfil...');
-    
+
     const profileData = {
       vrchat_id: vrchatId,
       discord_id: discordId,
@@ -109,13 +109,13 @@ const isValidVRChatId = (vrchatId) => {
     };
 
     const vrchatResponse = await VRCHAT_CLIENT.getUser({
-        path: {
-            userId: vrchatId
-        }
+      path: {
+        userId: vrchatId
+      }
     })
     const vrchatData = vrchatResponse.data;
     if (vrchatData && vrchatData.displayName) {
-        profileData.vrchat_name = vrchatData.displayName;
+      profileData.vrchat_name = vrchatData.displayName;
     }
 
     const response = await D1Class.createProfile(userRequestData, profileData);
@@ -125,8 +125,9 @@ const isValidVRChatId = (vrchatId) => {
     PrintMessage(`   Discord ID: ${discordId}`);
     PrintMessage(`   VRChat ID: ${vrchatId}`);
     PrintMessage(`✅ Perfil creado en la base de datos`);
-
+    exit(0);
   } catch (error) {
     PrintMessage(`❌ Error durante la adición del usuario: ${error.message}`);
+    exit(1);
   }
 })();
