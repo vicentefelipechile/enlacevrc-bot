@@ -20,7 +20,14 @@ const { D1Class } = require("../d1class");
 const settingsCommand = new ModularCommand('settings')
     .setDescription('Configure bot settings for this server.')
     .setCooldown(5)
-    .setPermissionCheck(i => i.member.permissions.has(PermissionFlagsBits.ManageGuild));
+    .setPermissionCheck(async (interaction) => {
+        const member = interaction.member;
+        if (!member || !member.permissions) {
+            return false;
+        }
+
+        return member.permissions.has(PermissionFlagsBits.ManageGuild);
+    });
 
 const SUBCOMMANDS_NAME = {
     VERIFICATION_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE,

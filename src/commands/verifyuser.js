@@ -134,7 +134,7 @@ verificationPlusCommand.setLocalizationPhrases({
 // Permission Check
 // =================================================================================================
 
-async function CheckPermission(interaction) {
+verificationPlusCommand.setPermissionCheck(async ({ interaction }) => {
     let exists = false;
     try {
         const staff = await D1Class.getStaff({
@@ -148,7 +148,7 @@ async function CheckPermission(interaction) {
     }
 
     return exists;
-}
+});
 
 // =================================================================================================
 // Command Logic
@@ -156,18 +156,6 @@ async function CheckPermission(interaction) {
 
 verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
     await interaction.deferReply();
-
-    // Permission check
-    const hasPermissions = await CheckPermission(interaction);
-    if (!hasPermissions) {
-        const embed = new EmbedBuilder()
-            .setTitle(locale['error.access_denied_title'])
-            .setDescription(locale['error.no_permission'])
-            .setColor(Colors.Red)
-            .setTimestamp();
-
-        return await interaction.editReply({ embeds: [embed] });
-    }
 
     // Fetch target user
     const targetUser = args.user;
