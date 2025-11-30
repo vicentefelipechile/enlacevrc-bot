@@ -9,7 +9,7 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ApplicationCommandOptionType, Colors } = require("discord.js");
+const { Locale, EmbedBuilder, ApplicationCommandOptionType, Colors, AttachmentBuilder } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const DISCORD_SERVER_SETTINGS = require("../discordsettings");
 const RandomColor = require("../randomcolor");
@@ -29,6 +29,9 @@ verificationPlusCommand.addOption({
     description: 'The user to verify for +18 access.',
     required: true,
 });
+
+const errorImage = new AttachmentBuilder('img/error.jpg', { name: 'error.jpg' });
+const errorUrl = 'attachment://' + errorImage.name;
 
 // =================================================================================================
 // Localization
@@ -70,6 +73,7 @@ verificationPlusCommand.setLocalizationPhrases({
         'error.user_already_has_role': 'The user already has the +18 verification role.',
         'error.assignment_failed_title': '❌ Role Assignment Failed',
         'error.failed_to_assign': 'Failed to assign the +18 verification role to the user.',
+        'error.chat_is_dm': 'This command can only be used in a server.',
         'error.internal_error_title': '❌ Internal Error',
         'error.internal_error_description': 'An internal error occurred while processing the command.',
         'success.title': '✅ User Verified for +18 Access',
@@ -95,6 +99,7 @@ verificationPlusCommand.setLocalizationPhrases({
         'error.already_verified_title': '❌ Ya Verificado',
         'error.assignment_failed_title': '❌ Fallo al Asignar Rol',
         'error.failed_to_assign': 'No se pudo asignar el rol de verificación +18 al usuario.',
+        'error.chat_is_dm': 'Este comando solo puede ser utilizado en un servidor.',
         'error.internal_error_title': '❌ Error Interno',
         'error.internal_error_description': 'Ocurrió un error interno al procesar el comando.',
         'success.title': '✅ Usuario Verificado para Acceso +18',
@@ -120,6 +125,7 @@ verificationPlusCommand.setLocalizationPhrases({
         'error.user_already_has_role': '¡Vamos tío! ¡Que ya tiene el rol de verificación +18 el fulano! ¡Qué nervio!',
         'error.assignment_failed_title': '❌ ¡Se Ha Liado la Cosa con el Rol, Vaya!',
         'error.failed_to_assign': '¡Ay, que no se pudo asignar el rol, tío! ¡Joder, qué cosa tan rara! ¡Madre mía!',
+        'error.chat_is_dm': '¡Pero huele que estás en un DM, tío! ¡Joder, qué cosa tan rara! ¡Madre mía!',
         'error.internal_error_title': '❌ ¡Error Interno, Qué Cosa Tan Rara!',
         'error.internal_error_description': '¡Ostras, chaval! ¡Joder! Algo se ha roto por dentro, ¡que vaya lío!',
         'success.title': '✅ ¡Tío Verificao Pa los +18, Olé!',
@@ -134,7 +140,7 @@ verificationPlusCommand.setLocalizationPhrases({
 // Permission Check
 // =================================================================================================
 
-verificationPlusCommand.setPermissionCheck(async ({ interaction }) => {
+verificationPlusCommand.setPermissionCheck(async (interaction) => {
     let exists = false;
     try {
         const staff = await D1Class.getStaff({
@@ -157,6 +163,20 @@ verificationPlusCommand.setPermissionCheck(async ({ interaction }) => {
 verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
     await interaction.deferReply();
 
+    // Check if the command is being used in a DM
+    if (!interaction.guild) {
+        const embed = new EmbedBuilder()
+            .setTitle(locale['error.chat_is_dm'])
+            .setColor(Colors.Red)
+            .setThumbnail(errorUrl)
+            .setTimestamp();
+
+        return await interaction.editReply({
+            embeds: [embed],
+            files: [errorImage],
+        });
+    }
+
     // Fetch target user
     const targetUser = args.user;
     const guildId = interaction.guild.id;
@@ -168,9 +188,13 @@ verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
             .setTitle(locale['error.user_not_found_title'])
             .setDescription(locale['error.user_not_found'])
             .setColor(Colors.Red)
+            .setThumbnail(errorUrl)
             .setTimestamp();
 
-        return await interaction.editReply({ embeds: [embed] });
+        return await interaction.editReply({
+            embeds: [embed],
+            files: [errorImage],
+        });
     }
 
     // Request user profile data
@@ -187,9 +211,13 @@ verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
             .setTitle(locale['error.user_not_verified_title'])
             .setDescription(locale['error.user_not_verified'])
             .setColor(Colors.Red)
+            .setThumbnail(errorUrl)
             .setTimestamp();
 
-        return await interaction.editReply({ embeds: [embed] });
+        return await interaction.editReply({
+            embeds: [embed],
+            files: [errorImage],
+        });
     }
 
     // Getting server roles and settings
@@ -206,9 +234,13 @@ verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
             .setTitle(locale['error.role_not_found_title'])
             .setDescription(locale['error.role_not_found'])
             .setColor(Colors.Red)
+            .setThumbnail(errorUrl)
             .setTimestamp();
 
-        return await interaction.editReply({ embeds: [embed] });
+        return await interaction.editReply({
+            embeds: [embed],
+            files: [errorImage],
+        });
     }
 
     // Verification Plus Role
@@ -218,9 +250,13 @@ verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
             .setTitle(locale['error.role_not_found_title'])
             .setDescription(locale['error.role_not_found'])
             .setColor(Colors.Red)
+            .setThumbnail(errorUrl)
             .setTimestamp();
 
-        return await interaction.editReply({ embeds: [embed] });
+        return await interaction.editReply({
+            embeds: [embed],
+            files: [errorImage],
+        });
     }
 
     const userWithVerificationRole = verificationRole.members.find(member => member.id === targetUser.id);
@@ -294,9 +330,10 @@ verificationPlusCommand.setExecute(async ({ interaction, locale, args }) => {
             .setTitle(locale['error.assignment_failed_title'])
             .setDescription(locale['error.failed_to_assign'])
             .setColor(Colors.Red)
+            .setThumbnail(errorUrl)
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed], files: [errorImage] });
     }
 });
 

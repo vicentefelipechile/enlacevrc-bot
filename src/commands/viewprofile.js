@@ -8,9 +8,8 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ApplicationCommandOptionType, MessageFlags } = require("discord.js");
+const { Locale, ApplicationCommandOptionType, MessageFlags } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
-const GetRandomColor = require("../randomcolor");
 const { DISCORD_CLIENT_ID } = require("../env");
 const { FormatProfileEmbed } = require("../util/profile");
 const { D1Class } = require("../d1class");
@@ -143,7 +142,7 @@ viewProfileCommand.setLocalizationOptions({
 viewProfileCommand.setExecute(async ({ interaction, locale, args }) => {
     try {
         await interaction.deferReply();
-        
+
         const targetUser = args['user'];
         const targetId = targetUser.id;
 
