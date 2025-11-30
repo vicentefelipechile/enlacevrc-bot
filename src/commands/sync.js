@@ -90,6 +90,8 @@ syncCommand.setLocalizationPhrases({
 // Command Execution
 // =================================================================================================
 
+syncCommand.setPermissionCheck(async (i) => !!i.member);
+
 syncCommand.setExecute(async ({ interaction, locale }) => {
     await interaction.deferReply();
 
