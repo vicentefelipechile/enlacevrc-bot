@@ -8,7 +8,7 @@
 // Imports
 // =================================================================================================
 
-const { PermissionFlagsBits, EmbedBuilder, Locale, Colors, ActionRowBuilder, ButtonStyle, ButtonBuilder, MessageFlags } = require("discord.js");
+const { PermissionFlagsBits, Locale, Colors, ActionRowBuilder, ButtonStyle, ButtonBuilder, MessageFlags, ContainerBuilder, SectionBuilder, TextDisplayBuilder, ThumbnailBuilder, AttachmentBuilder, SeparatorBuilder, SeparatorSpacingSize } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
 const { DISCORD_CLIENT_ID } = require("../env");
 
@@ -26,6 +26,14 @@ const PermissionCode = PermissionFlagsBits.ViewChannel |
     PermissionFlagsBits.UseExternalStickers;
 
 const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&scope=bot&permissions=${PermissionCode}`;
+
+const inviteButton = new ButtonBuilder()
+    .setLabel('Invite')
+    .setStyle(ButtonStyle.Link)
+    .setURL(inviteUrl)
+    .setEmoji('📎');
+
+const avatarAttachment = new AttachmentBuilder('img/avatar.jpg', { name: 'avatar.jpg' });
 
 const inviteCommand = new ModularCommand('invite')
     .setDescription('Get the invite link for the bot.')
@@ -64,25 +72,30 @@ inviteCommand.setLocalizationPhrases({
 // =================================================================================================
 
 inviteCommand.setExecute(async ({ interaction, locale }) => {
-    const button = new ActionRowBuilder()
-        .addComponents(
-            new ButtonBuilder()
-                .setLabel(locale['button.invite'])
-                .setStyle(ButtonStyle.Link)
-                .setURL(inviteUrl)
-                .setEmoji('📎')
+    const container = new ContainerBuilder()
+        .setAccentColor(Colors.Aqua)
+        .addSectionComponents(
+            new SectionBuilder()
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(locale['embed.description']))
+                .setThumbnailAccessory(
+                    new ThumbnailBuilder().setURL('attachment://' + avatarAttachment.name)
+                )
+        )
+        .addSeparatorComponents(
+            new SeparatorBuilder()
+                .setDivider(true)
+                .setSpacing(SeparatorSpacingSize.Small)
+        )
+        .addActionRowComponents(
+            new ActionRowBuilder()
+                .addComponents(inviteButton)
         );
 
-    const embed = new EmbedBuilder()
-        .setTitle(locale['embed.title'])
-        .setDescription(locale['embed.description'])
-        .setThumbnail(interaction.user.displayAvatarURL({ size: 1024 }))
-        .setColor(Colors.Purple);
-
     await interaction.reply({
-        embeds: [embed],
-        components: [button],
-        flags: MessageFlags.Ephemeral
+        components: [container],
+        flags: MessageFlags.IsComponentsV2,
+        attachments: [avatarAttachment]
     });
 });
 
