@@ -11,7 +11,7 @@
 
 const PrintMessage = require('../src/print');
 const { D1Class } = require('../src/d1class');
-const { D1_PRIVATE_KEY, DISCORD_CLIENT_ID } = require('../src/env');
+const { D1_PRIVATE_KEY, DISCORD_STAFF_ID, VRCHAT_APPLICATION_NAME } = require('../src/env');
 const { exit } = require('process');
 
 // =================================================================
@@ -61,10 +61,10 @@ const isValidDiscordId = (discordId) => {
             exit(1);
         }
 
-        // Create user request data (using bot credentials)
+        // Create user request data
         const userRequestData = {
-            discord_id: DISCORD_CLIENT_ID || '0',
-            discord_name: 'EnlaceVRC-Bot'
+            discord_id: DISCORD_STAFF_ID || '0',
+            discord_name: VRCHAT_APPLICATION_NAME || 'EnlaceVRC-Bot'
         };
 
         // Check if staff already exists

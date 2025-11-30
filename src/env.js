@@ -20,6 +20,7 @@ module.exports = {
     DISCORD_TOKEN: process.env.DISCORD_TOKEN,
     DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
     DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
+    DISCORD_STAFF_ID: process.env.DISCORD_STAFF_ID,
 
     // Cloudflare D1
     D1_PRIVATE_KEY: process.env.D1_PRIVATE_KEY,

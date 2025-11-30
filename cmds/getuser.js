@@ -11,7 +11,7 @@
 
 const PrintMessage = require('../src/print');
 const { D1Class } = require('../src/d1class');
-const { D1_PRIVATE_KEY } = require('../src/env');
+const { D1_PRIVATE_KEY, DISCORD_STAFF_ID, VRCHAT_APPLICATION_NAME } = require('../src/env');
 const { exit } = require('process');
 
 // =================================================================
@@ -48,39 +48,39 @@ const displayProfile = (profile) => {
   PrintMessage('═══════════════════════════════════════════════════════');
   PrintMessage('📋 Información del Perfil:');
   PrintMessage('═══════════════════════════════════════════════════════');
-  
+
   if (profile.discord_id) {
     PrintMessage(`   Discord ID: ${profile.discord_id}`);
   }
-  
+
   if (profile.vrchat_id) {
     PrintMessage(`   VRChat ID: ${profile.vrchat_id}`);
   }
-  
+
   if (profile.vrchat_name) {
     PrintMessage(`   VRChat Name: ${profile.vrchat_name}`);
   }
-  
+
   if (profile.is_verified !== undefined) {
     PrintMessage(`   Verified: ${profile.is_verified ? '✅ Yes' : '❌ No'}`);
   }
-  
+
   if (profile.is_banned !== undefined) {
     PrintMessage(`   Banned: ${profile.is_banned ? '❌ Yes' : '✅ No'}`);
   }
-  
+
   if (profile.banned_reason) {
     PrintMessage(`   Ban Reason: ${profile.banned_reason}`);
   }
-  
+
   if (profile.created_at) {
     PrintMessage(`   Created At: ${profile.created_at}`);
   }
-  
+
   if (profile.updated_at) {
     PrintMessage(`   Updated At: ${profile.updated_at}`);
   }
-  
+
   PrintMessage('═══════════════════════════════════════════════════════');
 };
 
@@ -125,15 +125,15 @@ const displayProfile = (profile) => {
       exit(1);
     }
 
-    // Create user request data (using bot credentials)
+    // Create user request data
     const userRequestData = {
-      discord_id: process.env.DISCORD_CLIENT_ID || '0',
-      discord_name: 'EnlaceVRC-Bot'
+      discord_id: DISCORD_STAFF_ID || '0',
+      discord_name: VRCHAT_APPLICATION_NAME || 'EnlaceVRC-Bot'
     };
 
     // Get profile
     PrintMessage(`🔍 Buscando perfil por ${idType}: ${userId}...`);
-    
+
     const profile = await D1Class.getProfile(userRequestData, userId, false);
 
     if (!profile) {

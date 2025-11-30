@@ -11,7 +11,7 @@
 
 const PrintMessage = require('../src/print');
 const { D1Class } = require('../src/d1class');
-const { D1_PRIVATE_KEY, DISCORD_CLIENT_ID } = require('../src/env');
+const { D1_PRIVATE_KEY, DISCORD_CLIENT_ID, DISCORD_STAFF_ID, VRCHAT_APPLICATION_NAME } = require('../src/env');
 const { exit } = require('process');
 
 // =================================================================
@@ -31,7 +31,7 @@ const displayStaffList = (staffList) => {
   PrintMessage('═══════════════════════════════════════════════════════');
   PrintMessage(`📋 Miembros de Staff (Total: ${staffList.length})`);
   PrintMessage('═══════════════════════════════════════════════════════');
-  
+
   staffList.forEach((staff, index) => {
     PrintMessage('');
     PrintMessage(`${index + 1}. Discord ID:  ${staff.discord_id}`);
@@ -39,7 +39,7 @@ const displayStaffList = (staffList) => {
     PrintMessage(`   Agregado:\t  ${staff.added_at}`);
     PrintMessage('');
   });
-  
+
   PrintMessage('═══════════════════════════════════════════════════════');
 };
 
@@ -57,15 +57,15 @@ const displayStaffList = (staffList) => {
       D1Class.init({ apiKey: D1_PRIVATE_KEY });
     }
 
-    // Create user request data (using bot credentials)
+    // Create user request data
     const userRequestData = {
-      discord_id: '356253258613915663',
-      discord_name: 'EnlaceVRC-Bot'
+      discord_id: DISCORD_STAFF_ID || '0',
+      discord_name: VRCHAT_APPLICATION_NAME || 'EnlaceVRC-Bot'
     };
 
     // Get staff list
     PrintMessage('🔍 Obteniendo lista de staff...');
-    
+
     const staffList = await D1Class.listStaff(userRequestData, false);
 
     // Display staff list
