@@ -28,7 +28,6 @@ const PermissionCode = PermissionFlagsBits.ViewChannel |
 const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&scope=bot&permissions=${PermissionCode}`;
 
 const inviteButton = new ButtonBuilder()
-    .setLabel('Invite')
     .setStyle(ButtonStyle.Link)
     .setURL(inviteUrl)
     .setEmoji('📎');
@@ -72,12 +71,15 @@ inviteCommand.setLocalizationPhrases({
 // =================================================================================================
 
 inviteCommand.setExecute(async ({ interaction, locale }) => {
+    const contentText = '# ' + locale['embed.title'] + '\n\n' + locale['embed.description'];
+
     const container = new ContainerBuilder()
         .setAccentColor(Colors.Aqua)
         .addSectionComponents(
             new SectionBuilder()
                 .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(locale['embed.description']))
+                    new TextDisplayBuilder().setContent(contentText)
+                )
                 .setThumbnailAccessory(
                     new ThumbnailBuilder().setURL('attachment://' + avatarAttachment.name)
                 )
@@ -89,13 +91,13 @@ inviteCommand.setExecute(async ({ interaction, locale }) => {
         )
         .addActionRowComponents(
             new ActionRowBuilder()
-                .addComponents(inviteButton)
+                .addComponents(inviteButton.setLabel(locale['button.invite']))
         );
 
     await interaction.reply({
         components: [container],
         flags: MessageFlags.IsComponentsV2,
-        attachments: [avatarAttachment]
+        files: [avatarAttachment]
     });
 });
 
