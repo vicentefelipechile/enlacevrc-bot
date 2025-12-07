@@ -51,6 +51,7 @@ profileCommand.setLocalizationPhrases({
         'embed.nopronouns': 'Not specified',
         'embed.verification_code_detected': 'I noticed that you still have the code {code} in your VRChat biography. Once verified, there is no need to keep it there.',
         'embed.verification_by': 'Verified by <@{discord_id}>',
+        'embed.banned_by': 'Banned by <@{banned_by}>\nRazon: **{banned_reason}**\nBanned at {banned_at}',
         'embed.body':
             `# [{profile_name}]({profile_url})` +
             `\n` +
@@ -77,6 +78,7 @@ profileCommand.setLocalizationPhrases({
         'embed.nopronouns': 'No especificado',
         'embed.verification_code_detected': 'He notado que aún tienes el código {code} en tu biografía de VRChat. Una vez verificado no hace falta mantenerlo.',
         'embed.verification_by': 'Verificador por <@{discord_id}>',
+        'embed.banned_by': 'Baneado por <@{banned_by}>\nRazon: **{banned_reason}**\nBaneado el {banned_at}',
         'embed.body':
             `# [{profile_name}]({profile_url})` +
             `\n` +
@@ -103,6 +105,7 @@ profileCommand.setLocalizationPhrases({
         'embed.nopronouns': 'No especificao',
         'embed.verification_code_detected': '¡Oye, mira que eres lerdo! Que aún llevas el código {code} en la biografía de VRChat. Una vez verificao, quítate eso del medio, que ocupa.',
         'embed.verification_by': 'Verificao por <@{discord_id}>',
+        'embed.banned_by': 'Baneado por <@{banned_by}>\nRazon: **{banned_reason}**\nBaneado el {banned_at}',
         'embed.body':
             `# [{profile_name}]({profile_url})` +
             `\n` +
@@ -146,7 +149,7 @@ profileCommand.setExecute(async ({ interaction, locale, command }) => {
             .setLabel(locale['button.verify'])
             .setStyle(ButtonStyle.Primary)
             .setCustomId('verification_profile');
-        
+
         return await interaction.editReply({
             content: locale['error.not_verified'].replace('{command}', command.name),
             components: [new ActionRowBuilder().addComponents(verificationButton)],

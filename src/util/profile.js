@@ -1,6 +1,16 @@
 const { ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder, ActionRowBuilder, ButtonStyle, ButtonBuilder, SeparatorBuilder, SeparatorSpacingSize } = require('discord.js');
 const GetRandomColor = require('../randomcolor');
 
+function FormatDate(date) {
+  return `${new Date(date).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}`;
+}
+
 const PERSONALITY_URL = 'https://www.16personalities.com/es/personalidad-';
 const PERSONALITY_TYPES = [
   'INTJ', 'INTP', 'ENTJ', 'ENTP',
@@ -36,8 +46,14 @@ function FormatProfileEmbed(vrchatUser, profileData, locale, subText = null) {
   const sanitizedBio = vrchatUser.bio.replace(/([`*_~|\\-])/g, '\\$1');
   const formattedBio = FormatP16(sanitizedBio);
 
+  let formattedDisplayName = vrchatUser.displayName
+
+  if (profileData.is_banned) {
+    formattedDisplayName = `~~${formattedDisplayName}~~ ${locale['embed.banned']}`;
+  }
+
   const textContent = locale['embed.body']
-    .replace('{profile_name}', vrchatUser.displayName)
+    .replace('{profile_name}', formattedDisplayName)
     .replace('{profile_url}', `https://vrchat.com/home/user/${vrchatUser.id}`)
     .replace('{profile_bio}', formattedBio)
     .replace('{profile_status}', vrchatUser.status || locale['embed.status.nostatus'])
@@ -48,7 +64,7 @@ function FormatProfileEmbed(vrchatUser, profileData, locale, subText = null) {
     footerContent += locale['embed.verification_by'].replace('{discord_id}', profileData.verified_by);
     footerContent += '\n';
   }
-  footerContent += `ID: ${vrchatUser.id} • ${new Date(vrchatUser.date_joined).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+  footerContent += `ID: ${vrchatUser.id} • ${FormatDate(vrchatUser.date_joined)}`;
 
   const buttonsContainer = new ActionRowBuilder()
     .addComponents(
@@ -58,7 +74,7 @@ function FormatProfileEmbed(vrchatUser, profileData, locale, subText = null) {
         .setEmoji('🔗')
         .setURL(`https://vrchat.com/home/user/${vrchatUser.id}`)
     );
-  
+
   const P16 = ExtractP16URL(vrchatUser.bio);
   if (P16) {
     buttonsContainer.addComponents(
@@ -84,7 +100,27 @@ function FormatProfileEmbed(vrchatUser, profileData, locale, subText = null) {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(footerContent)
     )
-    .addActionRowComponents(buttonsContainer);
+
+  if (profileData.is_banned) {
+    newComponent.addSeparatorComponents(
+      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
+    )
+
+    const bannedFooterContent = locale['embed.banned_by']
+      .replace('{banned_by}', profileData.banned_by)
+      .replace('{banned_reason}', profileData.banned_reason)
+      .replace('{banned_at}', `${FormatDate(profileData.banned_at)}`);
+
+    newComponent.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(bannedFooterContent)
+    )
+
+    newComponent.addSeparatorComponents(
+      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
+    )
+  }
+
+  newComponent.addActionRowComponents(buttonsContainer);
 
   return newComponent;
 }

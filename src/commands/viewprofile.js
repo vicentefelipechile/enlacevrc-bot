@@ -59,6 +59,8 @@ viewProfileCommand.setLocalizationPhrases({
         'embed.nopronouns': 'Not specified',
         'embed.verification_code_detected': 'I noticed that you still have the code {code} in your VRChat biography. Once verified, there is no need to keep it there.',
         'embed.verification_by': 'Verified by <@{discord_id}>',
+        'embed.banned_by': 'Banned by <@{banned_by}>\nReason: **{banned_reason}**\nBanned at {banned_at}',
+        'embed.banned': 'Banned!',
         'embed.body':
             `# [{profile_name}]({profile_url})` +
             `\n` +
@@ -84,7 +86,9 @@ viewProfileCommand.setLocalizationPhrases({
         'embed.nostatus': 'Sin estado',
         'embed.nopronouns': 'No especificado',
         'embed.verification_code_detected': 'He notado que aún tienes el código {code} en tu biografía de VRChat. Una vez verificado no hace falta mantenerlo.',
-        'embed.verification_by': 'Verificador por <@{discord_id}>',
+        'embed.verification_by': 'Verificado por <@{discord_id}>',
+        'embed.banned_by': 'Baneado por <@{banned_by}>\nRazon: **{banned_reason}**\nBaneado el {banned_at}',
+        'embed.banned': 'Baneado!',
         'embed.body':
             `# [{profile_name}]({profile_url})` +
             `\n` +
@@ -111,6 +115,8 @@ viewProfileCommand.setLocalizationPhrases({
         'embed.nopronouns': 'No especificao',
         'embed.verification_code_detected': '¡Oye, mira que eres lerdo! Que aún llevas el código {code} en la biografía de VRChat. Una vez verificao, quítate eso del medio, que ocupa.',
         'embed.verification_by': 'Verificao por <@{discord_id}>',
+        'embed.banned_by': 'Baneado por <@{banned_by}>\nRazón: **{banned_reason}**\nBaneado el {banned_at}',
+        'embed.banned': 'Baneado chaval!',
         'embed.body':
             `# [{profile_name}]({profile_url})` +
             `\n` +
@@ -140,76 +146,67 @@ viewProfileCommand.setLocalizationOptions({
 // =================================================================================================
 
 viewProfileCommand.setExecute(async ({ interaction, locale, args }) => {
-    try {
-        await interaction.deferReply();
+    await interaction.deferReply();
 
-        const targetUser = args['user'];
-        const targetId = targetUser.id;
+    const targetUser = args['user'];
+    const targetId = targetUser.id;
 
-        if (targetId === DISCORD_CLIENT_ID) {
-            return await interaction.editReply({
-                content: locale['error.is_the_bot'],
-                embeds: []
-            });
-        }
-
-        // Check if target user is a bot
-        if (targetUser.bot) {
-            return await interaction.editReply({
-                content: locale['error.is_bot'],
-                embeds: []
-            });
-        }
-
-        // Get the target user's profile
-        const userRequestData = {
-            discord_id: interaction.user.id,
-            discord_name: interaction.user.username
-        }
-
-        let profileData = null;
-        try {
-            profileData = await D1Class.getProfile(userRequestData, targetId);
-        } catch (error) {
-            return await interaction.editReply({
-                content: locale['error.not_verified_user'],
-                embeds: []
-            });
-        }
-
-        const vrchatResponse = await VRCHAT_CLIENT.getUser({
-            path: {
-                userId: profileData.vrchat_id
-            }
-        });
-        const vrchatData = vrchatResponse.data;
-
-        const profileEmbed = FormatProfileEmbed(vrchatData, profileData, locale);
-        const code = generateCodeByVRChat(profileData.vrchat_id);
-
-        let responseMessage = locale['success'].replace('{target}', `<@${targetId}>`);
-
-        // Check if user still has verification code in bio
-        if (vrchatData.bio && code && vrchatData.bio.includes(code)) {
-            const codeMessage = locale['embed.verification_code_detected']
-                .replace('{code}', code)
-                .replace('{target}', `<@${targetId}>`);
-            responseMessage += '\n\n' + codeMessage;
-        }
-
-        await interaction.editReply({
-            // content: responseMessage,
-            components: [profileEmbed],
-            flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
-        });
-
-    } catch (error) {
-        console.error('Error in viewprofile command:', error);
-        await interaction.editReply({
-            content: locale['error.general'],
+    if (targetId === DISCORD_CLIENT_ID) {
+        return await interaction.editReply({
+            content: locale['error.is_the_bot'],
             embeds: []
         });
     }
+
+    // Check if target user is a bot
+    if (targetUser.bot) {
+        return await interaction.editReply({
+            content: locale['error.is_bot'],
+            embeds: []
+        });
+    }
+
+    // Get the target user's profile
+    const userRequestData = {
+        discord_id: interaction.user.id,
+        discord_name: interaction.user.username
+    }
+
+    let profileData = null;
+    try {
+        profileData = await D1Class.getProfile(userRequestData, targetId);
+    } catch (error) {
+        return await interaction.editReply({
+            content: locale['error.not_verified_user'],
+            embeds: []
+        });
+    }
+
+    const vrchatResponse = await VRCHAT_CLIENT.getUser({
+        path: {
+            userId: profileData.vrchat_id
+        }
+    });
+    const vrchatData = vrchatResponse.data;
+
+    const profileEmbed = FormatProfileEmbed(vrchatData, profileData, locale);
+    const code = generateCodeByVRChat(profileData.vrchat_id);
+
+    let responseMessage = locale['success'].replace('{target}', `<@${targetId}>`);
+
+    // Check if user still has verification code in bio
+    if (vrchatData.bio && code && vrchatData.bio.includes(code)) {
+        const codeMessage = locale['embed.verification_code_detected']
+            .replace('{code}', code)
+            .replace('{target}', `<@${targetId}>`);
+        responseMessage += '\n\n' + codeMessage;
+    }
+
+    await interaction.editReply({
+        // content: responseMessage,
+        components: [profileEmbed],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
+    });
 });
 
 // =================================================================================================
