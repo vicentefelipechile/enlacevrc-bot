@@ -1,5 +1,6 @@
 const { ContainerBuilder, TextDisplayBuilder, MediaGalleryBuilder, ActionRowBuilder, ButtonStyle, ButtonBuilder, SeparatorBuilder, SeparatorSpacingSize } = require('discord.js');
 const GetRandomColor = require('../randomcolor');
+const { formatUrlsWithEmojis } = require('./socialicons');
 
 function FormatDate(date) {
   return `${new Date(date).toLocaleDateString('es-ES', {
@@ -42,7 +43,7 @@ function ExtractP16URL(description) {
   return null;
 }
 
-function FormatProfileEmbed(vrchatUser, profileData, locale, subText = null) {
+async function FormatProfileEmbed(vrchatUser, profileData, locale, subText = null) {
   const sanitizedBio = vrchatUser.bio.replace(/([`*_~|\\-])/g, '\\$1');
   const formattedBio = FormatP16(sanitizedBio);
 
@@ -50,6 +51,68 @@ function FormatProfileEmbed(vrchatUser, profileData, locale, subText = null) {
 
   if (profileData.is_banned) {
     formattedDisplayName = `~~${formattedDisplayName}~~ ${locale['embed.banned']}`;
+  }
+
+  // Extract Trust Level and add emoji
+  const trustLevelEmojis = {
+    'Visitor': '🔘',
+    'New User': '🔵',
+    'User': '🟢',
+    'Known User': '🟠',
+    'Trusted User': '🟣'
+  };
+  const trustLevel = vrchatUser.tags?.find(tag => ['system_trust_basic', 'system_trust_known', 'system_trust_trusted', 'system_trust_veteran', 'system_trust_legend'].includes(tag));
+  let trustLevelText = '';
+  if (trustLevel) {
+    const levelMap = {
+      'system_trust_basic': 'New User',
+      'system_trust_known': 'User',
+      'system_trust_trusted': 'Known User',
+      'system_trust_veteran': 'Trusted User',
+      'system_trust_legend': 'Trusted User'
+    };
+    const levelName = levelMap[trustLevel] || 'Visitor';
+    const emoji = trustLevelEmojis[levelName] || '⚪';
+    trustLevelText = `\n**Trust Level**: ${emoji} ${levelName}`;
+  }
+
+  // Extract and format social links with emojis
+  const bioWithLinks = vrchatUser.bio + '\n' + (vrchatUser.statusDescription || '');
+  const { formatted_urls, has_unknown_links } = formatUrlsWithEmojis(bioWithLinks);
+  let linksText = '';
+  if (formatted_urls.length > 0) {
+    linksText = '\n\n**Links**:\n' + formatted_urls.slice(0, 5).join('\n');
+    if (has_unknown_links) {
+      linksText += '\n\n⚠️ _Este perfil contiene enlaces externos. Nunca entres a enlaces de personas que no conozcas por seguridad._';
+    }
+  }
+
+  // Extract VRChat badges if available
+  let badgesText = '';
+  if (vrchatUser.badges && vrchatUser.badges.length > 0) {
+    const badgeEmojis = vrchatUser.badges.map(badge => {
+      // Map badge IDs to emojis or names
+      return badge.badgeName || badge.badgeDescription || '🏅';
+    }).slice(0, 5);
+    if (badgeEmojis.length > 0) {
+      badgesText = `\n**Badges**: ${badgeEmojis.join(' ')}`;
+    }
+  }
+
+  // Calculate days verified
+  let daysVerifiedText = '';
+  if (profileData.created_at) {
+    const createdDate = new Date(profileData.created_at);
+    const now = new Date();
+    const diffTime = Math.abs(now - createdDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    daysVerifiedText = `\n**Days Verified**: ${diffDays}`;
+  }
+
+  // Account creation date
+  let accountAgeText = '';
+  if (vrchatUser.date_joined) {
+    accountAgeText = `\n**Account Created**: <t:${Math.floor(new Date(vrchatUser.date_joined).getTime() / 1000)}:D>`;
   }
 
   const textContent = locale['embed.body']

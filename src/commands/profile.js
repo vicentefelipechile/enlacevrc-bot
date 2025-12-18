@@ -8,9 +8,8 @@
 // Imports
 // =================================================================================================
 
-const { Locale, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } = require("discord.js");
+const { Locale, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } = require("discord.js");
 const { ModularCommand, RegisterCommand } = require("js-discord-modularcommand");
-const GetRandomColor = require("../randomcolor");
 const { D1Class } = require("../d1class");
 const { VRCHAT_CLIENT } = require("../vrchat");
 const { generateCodeByVRChat } = require("../util/vrchatcode");
@@ -163,7 +162,7 @@ profileCommand.setExecute(async ({ interaction, locale, command }) => {
     });
     const vrchatData = vrchatResponse.data;
 
-    const profileEmbed = FormatProfileEmbed(vrchatData, profileData, locale);
+    const profileEmbed = await FormatProfileEmbed(vrchatData, profileData, locale);
     const code = generateCodeByVRChat(vrchatData.id);
     let localePhraseTarget = null;
 
