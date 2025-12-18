@@ -21,19 +21,54 @@ const banCommand = new ModularCommand('ban')
     .setDescription('Ban a user from the database (Staff only).')
     .setCooldown(5);
 
-banCommand.addOption({
-    name: 'user',
-    type: ApplicationCommandOptionType.User,
-    description: 'The user to ban from the database.',
-    required: true,
-});
+const SUBCOMMAND = {
+    USER: 'user',
+    ID: 'id',
+}
 
-banCommand.addOption({
-    name: 'reason',
-    type: ApplicationCommandOptionType.String,
-    description: 'The reason for the ban.',
-    required: true,
-});
+const ARGS = {
+    USER: 'user',
+    ID: 'id',
+    REASON: 'reason',
+}
+
+banCommand.addSubCommand({
+    name: SUBCOMMAND.USER,
+    description: 'Ban a user from the database.',
+    options: [
+        {
+            name: ARGS.USER,
+            type: ApplicationCommandOptionType.User,
+            description: 'The user to ban from the database.',
+            required: true,
+        },
+        {
+            name: ARGS.REASON,
+            type: ApplicationCommandOptionType.String,
+            description: 'The reason for the ban.',
+            required: true,
+        },
+    ],
+})
+
+banCommand.addSubCommand({
+    name: SUBCOMMAND.ID,
+    description: 'Ban a user from the database.',
+    options: [
+        {
+            name: ARGS.ID,
+            type: ApplicationCommandOptionType.String,
+            description: 'The user to ban from the database.',
+            required: true,
+        },
+        {
+            name: ARGS.REASON,
+            type: ApplicationCommandOptionType.String,
+            description: 'The reason for the ban.',
+            required: true,
+        },
+    ],
+})
 
 const errorImage = new AttachmentBuilder('img/error.jpg', { name: 'error.jpg' });
 const errorUrl = 'attachment://' + errorImage.name;
@@ -46,21 +81,6 @@ banCommand.setLocalizationDescription({
     [Locale.EnglishUS]: 'Ban a user from the database (Staff only).',
     [Locale.SpanishLATAM]: 'Banear un usuario de la base de datos (Solo staff).',
     [Locale.SpanishES]: '¡Banear un tío de la base de datos (Solo staff, joder)!',
-});
-
-banCommand.setLocalizationOptions({
-    [Locale.EnglishUS]: {
-        'user': 'The user to ban from the database.',
-        'reason': 'The reason for the ban.',
-    },
-    [Locale.SpanishLATAM]: {
-        'user': 'El usuario a banear de la base de datos.',
-        'reason': 'La razón del baneo.',
-    },
-    [Locale.SpanishES]: {
-        'user': '¡El tío que quieres banear de la base de datos, chaval!',
-        'reason': '¡La razón del baneo, joder!',
-    },
 });
 
 banCommand.setLocalizationPhrases({
@@ -113,6 +133,23 @@ banCommand.setLocalizationPhrases({
         'success.footer': '¡Baneao por {moderator}, joder, que bien! ¡Olé!',
     },
 });
+
+banCommand.setLocalizationSubCommands({
+    [Locale.EnglishUS]: {
+        [`${SUBCOMMAND.USER}`]: 'Ban a user',
+        [`${SUBCOMMAND.USER}.description`]: 'Ban a user',
+        [`${SUBCOMMAND.USER}.${ARGS.USER}`]: 'User to ban',
+        [`${SUBCOMMAND.USER}.${ARGS.USER}.description`]: 'User to ban',
+        [`${SUBCOMMAND.USER}.${ARGS.REASON}`]: 'Reason for the ban',
+        [`${SUBCOMMAND.USER}.${ARGS.REASON}.description`]: 'Reason for the ban',
+        [`${SUBCOMMAND.ID}`]: 'Ban a user using their ID',
+        [`${SUBCOMMAND.ID}.description`]: 'Ban a user using their ID',
+        [`${SUBCOMMAND.ID}.${ARGS.ID}`]: 'User ID to ban',
+        [`${SUBCOMMAND.ID}.${ARGS.ID}.description`]: 'User ID to ban',
+        [`${SUBCOMMAND.ID}.${ARGS.REASON}`]: 'Reason for the ban',
+        [`${SUBCOMMAND.ID}.${ARGS.REASON}.description`]: 'Reason for the ban',
+    },
+})
 
 // =================================================================================================
 // Permission Check

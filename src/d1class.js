@@ -593,6 +593,69 @@ class D1Class {
     }
 
     // =================================================================================================
+    // Statistics Methods
+    // =================================================================================================
+
+    /**
+     * Obtiene estadísticas globales del bot
+     * @param {Object} userRequestData - Datos del usuario que realiza la petición
+     * @param {string} userRequestData.discord_id - Discord ID del usuario
+     * @param {string} userRequestData.discord_name - Nombre de Discord del usuario
+     * @param {boolean} [useCache=true] - Usar caché
+     * @returns {Promise<Object>} Estadísticas globales (total_users, total_servers, verified_users, etc.)
+     */
+    static async getGlobalStats(userRequestData, useCache = true) {
+        const cacheKey = 'stats:global';
+
+        if (!useCache) {
+            D1Class.cache.del(cacheKey);
+        }
+
+        return D1Class._getCached(
+            cacheKey,
+            async () => {
+                const response = await D1Class._request('/stats/global', userRequestData);
+                return response.data;
+            },
+            MINUTE * 5 // Cache for 5 minutes
+        );
+    }
+
+    /**
+     * Obtiene estadísticas de un servidor específico
+     * @param {Object} userRequestData - Datos del usuario que realiza la petición
+     * @param {string} userRequestData.discord_id - Discord ID del usuario
+     * @param {string} userRequestData.discord_name - Nombre de Discord del usuario
+     * @param {string} serverId - ID del servidor de Discord
+     * @param {boolean} [useCache=true] - Usar caché
+     * @returns {Promise<Object>} Estadísticas del servidor (verified_users_count, join_date, etc.)
+     */
+    static async getServerStats(userRequestData, serverId, useCache = true) {
+        const cacheKey = `stats:server:${serverId}`;
+
+        if (!useCache) {
+            D1Class.cache.del(cacheKey);
+        }
+
+        return D1Class._getCached(
+            cacheKey,
+            async () => {
+                const response = await D1Class._request(`/stats/server/${serverId}`, userRequestData);
+                return response.data;
+            },
+            MINUTE * 5 // Cache for 5 minutes
+        );
+    }
+
+    // =================================================================================================
+    // Utility Methods
+    // =================================================================================================
+
+    // =================================================================================================
+    // Utility Methods
+    // =================================================================================================
+
+    // =================================================================================================
     // Utility Methods
     // =================================================================================================
 

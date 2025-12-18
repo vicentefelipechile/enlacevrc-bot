@@ -193,10 +193,10 @@ settingsCommand.setLocalizationPhrases({
 
 settingsCommand.setLocalizationSubCommands({
     [Locale.EnglishUS]: {
-        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}`]: 'Role for Verified Users',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.description`]: 'Set the role given to verified users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}`]: 'Role for Linked Users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.description`]: 'Set the role given to linked users',
         [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role`]: 'Role',
-        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role.description`]: 'The role to assign to verified users',
+        [`${SUBCOMMANDS_NAME.VERIFICATION_ROLE}.role.description`]: 'The role to assign to linked users',
 
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}`]: 'Role for 18+ Verified Users',
         [`${SUBCOMMANDS_NAME.VERIFICATION_PLUS_ROLE}.description`]: 'Set the role given to 18+ verified users',
