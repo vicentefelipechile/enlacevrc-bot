@@ -33,6 +33,7 @@ const SUBCOMMANDS_NAME = {
     VERIFICATION_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE,
     VERIFICATION_PLUS_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE,
     AUTO_NICKNAME: DISCORD_SERVER_SETTINGS.AUTO_NICKNAME,
+    LOG_CHANNEL: DISCORD_SERVER_SETTINGS.LOG_CHANNEL,
     VIEW: 'view',
     RESET: 'reset'
 }
@@ -81,6 +82,19 @@ settingsCommand.addSubCommand({
 });
 
 settingsCommand.addSubCommand({
+    name: SUBCOMMANDS_NAME.LOG_CHANNEL,
+    description: 'Set the channel where bot actions will be logged',
+    options: [
+        {
+            name: 'channel',
+            description: 'The channel to log bot actions',
+            type: ApplicationCommandOptionType.Channel,
+            required: true,
+        }
+    ]
+});
+
+settingsCommand.addSubCommand({
     name: SUBCOMMANDS_NAME.VIEW,
     description: 'View current server settings'
 });
@@ -90,16 +104,16 @@ settingsCommand.addSubCommand({
     description: 'Reset a specific setting',
     options: [
         {
-            name: 'option',
+            name: 'setting',
             description: 'The setting to reset',
             type: ApplicationCommandOptionType.String,
             required: true,
             choices: [
                 { name: 'Verified Role', value: 'verified_role' },
                 { name: 'Verified 18+ Role', value: 'verified_18_role' },
-                { name: 'Welcome Channel', value: 'welcome_channel' },
                 { name: 'Verification Channel', value: 'verification_channel' },
                 { name: 'Auto Nickname', value: 'auto_nickname' },
+                { name: 'Log Channel', value: 'log_channel' },
                 { name: 'All Settings', value: 'all' }
             ]
         }
@@ -124,8 +138,8 @@ settingsCommand.setLocalizationPhrases({
         'error.not_found': 'Setting not found or already reset.',
         'success.verification_role': 'Verification role has been set to {role}.',
         'success.verification_plus_role': '18+ verification role has been set to {role}.',
-        'success.verification_channel': 'Verification channel has been set to {channel}.',
         'success.auto_nickname': 'Auto nickname update has been {status}.',
+        'success.log_channel': 'Log channel has been set to {channel}.',
         'success.reset': 'Setting "{setting}" has been reset successfully.',
         'success.reset_all': 'All server settings have been reset successfully.',
         'success.settings_registered': 'Default settings have been registered for this server. Try the command again.',
@@ -135,8 +149,8 @@ settingsCommand.setLocalizationPhrases({
         'view.description': 'Current bot configuration for this server:',
         'view.verification_role': 'Verification Role:',
         'view.verification_plus_role': '18+ Verification Role:',
-        'view.verification_channel': 'Verification Channel:',
         'view.auto_nickname': 'Auto Nickname:',
+        'view.log_channel': 'Log Channel:',
         'view.not_set': 'Not set',
         'view.enabled': 'Enabled',
         'view.disabled': 'Disabled',
@@ -148,8 +162,8 @@ settingsCommand.setLocalizationPhrases({
         'error.not_found': 'Configuración no encontrada o ya restablecida.',
         'success.verification_role': 'El rol de verificación ha sido establecido como {role}.',
         'success.verification_plus_role': 'El rol de verificación +18 ha sido establecido como {role}.',
-        'success.verification_channel': 'El canal de verificación ha sido establecido como {channel}.',
         'success.auto_nickname': 'La actualización automática de apodos ha sido {status}.',
+        'success.log_channel': 'El canal de log ha sido establecido como {channel}.',
         'success.reset': 'La configuración "{setting}" ha sido restablecida exitosamente.',
         'success.reset_all': 'Todas las configuraciones del servidor han sido restablecidas exitosamente.',
         'success.settings_registered': 'Las configuraciones predeterminadas han sido registradas para este servidor. Intenta el comando de nuevo.',
@@ -159,8 +173,8 @@ settingsCommand.setLocalizationPhrases({
         'view.description': 'Configuración actual del bot para este servidor:',
         'view.verification_role': 'Rol de Verificación:',
         'view.verification_plus_role': 'Rol de Verificación +18:',
-        'view.verification_channel': 'Canal de Verificación:',
         'view.auto_nickname': 'Apodo Automático:',
+        'view.log_channel': 'Canal de Log:',
         'view.not_set': 'No establecido',
         'view.enabled': 'Habilitado',
         'view.disabled': 'Deshabilitado',
@@ -172,8 +186,8 @@ settingsCommand.setLocalizationPhrases({
         'error.not_found': 'Ese ajuste ni está ni se le espera, o ya lo has reseteado, figura.',
         'success.verification_role': '¡De lujo! El rol de verificación ahora es {role}, como Dios manda.',
         'success.verification_plus_role': '¡Canelita en rama! El rol de verificación +18 ahora es {role}.',
-        'success.verification_channel': '¡Hecho! El canal de verificación ahora es {channel}, tronco.',
         'success.auto_nickname': 'La actualización automática de apodos está {status}, chaval.',
+        'success.log_channel': '¡Hecho! El canal de log ahora es {channel}, tronco.',
         'success.reset': 'El ajuste "{setting}" se ha reseteado que da gusto.',
         'success.reset_all': '¡Menuda limpieza! Todos los ajustes del servidor han vuelto a cero, como nuevos.',
         'success.settings_registered': '¡Hostia, que no teníais ni ajustes! Ya os he puesto los predeterminados, probad el comando otra vez, majos.',
@@ -184,7 +198,7 @@ settingsCommand.setLocalizationPhrases({
         'view.verification_role': 'Rol de Verificación:',
         'view.verification_plus_role': 'Rol de Verificación +18:',
         'view.auto_nickname': 'Apodo Automático:',
-        'view.verification_channel': 'Canal de Verificación:',
+        'view.log_channel': 'Canal de Log:',
         'view.not_set': 'Ni puesto, macho',
         'view.enabled': 'Activado',
         'view.disabled': 'Desactivado',
@@ -208,6 +222,11 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: 'Enable Auto Nickname',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled.description`]: 'Enable or disable automatic nickname updates for new members',
 
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}`]: 'Log Channel',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.description`]: 'Set the channel where bot actions will be logged',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.channel`]: 'Channel',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.channel.description`]: 'The channel to log bot actions',
+
         [`${SUBCOMMANDS_NAME.VIEW}`]: 'View Settings',
         [`${SUBCOMMANDS_NAME.VIEW}.description`]: 'View current server settings',
 
@@ -221,6 +240,7 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_role`]: 'Verified Role',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_18_role`]: '18+ Verified Role',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.auto_nickname`]: 'Auto Nickname',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.log_channel`]: 'Log Channel',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: 'All Settings'
     },
     [Locale.SpanishLATAM]: {
@@ -239,6 +259,11 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: 'Habilitar Apodo Automático',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled.description`]: 'Habilita o deshabilita las actualizaciones automáticas de apodo para nuevos miembros',
 
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}`]: 'Canal de Registros',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.description`]: 'Establece el canal donde se registrarán las acciones del bot',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.channel`]: 'Canal',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.channel.description`]: 'El canal donde se registrarán las acciones del bot',
+
         [`${SUBCOMMANDS_NAME.VIEW}`]: 'Ver Configuración',
         [`${SUBCOMMANDS_NAME.VIEW}.description`]: 'Ver la configuración actual del servidor',
 
@@ -252,6 +277,7 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_role`]: 'Rol Verificado',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_18_role`]: 'Rol Verificado +18',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.auto_nickname`]: 'Apodo Automático',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.log_channel`]: 'Canal de Registros',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: 'Todas las Configuraciones'
     },
     [Locale.SpanishES]: {
@@ -270,6 +296,11 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled`]: '¿Lo activamos o qué?',
         [`${SUBCOMMANDS_NAME.AUTO_NICKNAME}.enabled.description`]: '¡Venga tío! Di si quieres que se actualicen los apodos automáticamente o no, figura',
 
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}`]: 'Canal de Registros',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.description`]: 'Establece el canal donde se registrarán las acciones del bot',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.channel`]: 'Canal',
+        [`${SUBCOMMANDS_NAME.LOG_CHANNEL}.channel.description`]: 'El canal donde se registrarán las acciones del bot',
+
         [`${SUBCOMMANDS_NAME.VIEW}`]: '¡A ver! Mirar los ajustes',
         [`${SUBCOMMANDS_NAME.VIEW}.description`]: 'Échale un vistazo a cómo tienes montado el chiringuito del servidor',
 
@@ -282,8 +313,8 @@ settingsCommand.setLocalizationSubCommands({
         [`${SUBCOMMANDS_NAME.RESET}.option.description`]: '¿Qué configuración quieres resetear, colega?',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_role`]: 'Rol de Verificados',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.verified_18_role`]: 'Rol de Verificados +18',
-        [`${SUBCOMMANDS_NAME.RESET}.option.choice.welcome_channel`]: 'Canal de Bienvenida',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.auto_nickname`]: 'Apodo Automático',
+        [`${SUBCOMMANDS_NAME.RESET}.option.choice.log_channel`]: 'Canal de Registros',
         [`${SUBCOMMANDS_NAME.RESET}.option.choice.all`]: '¡Todo a la mierda! Todos los ajustes'
     }
 });
@@ -379,6 +410,17 @@ settingsCommand.setExecute(async ({ interaction, locale, args }) => {
                 break;
             }
 
+            case SUBCOMMANDS_NAME.LOG_CHANNEL: {
+                const channel = args['channel'];
+                await D1Class.updateDiscordSetting(userRequestData, serverId, SUBCOMMANDS_NAME.LOG_CHANNEL, channel.id);
+                await interaction.editReply({
+                    content: locale['success.log_channel'].replace('{channel}', `<#${channel.id}>`),
+                    embeds: [],
+                    flags: MessageFlags.SuppressNotifications
+                });
+                break;
+            }
+
             case SUBCOMMANDS_NAME.VIEW: {
                 const settings = await D1Class.getAllDiscordSettings(userRequestData, serverId);
 
@@ -401,6 +443,11 @@ settingsCommand.setExecute(async ({ interaction, locale, args }) => {
                             name: locale['view.auto_nickname'],
                             value: formatBoolean(settings[SUBCOMMANDS_NAME.AUTO_NICKNAME], locale),
                             inline: false
+                        },
+                        {
+                            name: locale['view.log_channel'],
+                            value: formatChannel(settings[SUBCOMMANDS_NAME.LOG_CHANNEL], interaction.guild, locale),
+                            inline: false
                         }
                     )
                     .setTimestamp()
@@ -422,9 +469,10 @@ settingsCommand.setExecute(async ({ interaction, locale, args }) => {
 
                 if (settingToReset === 'all') {
                     // Reset all settings by getting all and deleting each one
-                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.AUTO_NICKNAME, '');
-                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE, '');
-                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE, '');
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.AUTO_NICKNAME, '0');
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE, '0');
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE, '0');
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, DISCORD_SERVER_SETTINGS.LOG_CHANNEL, '0');
 
                     await interaction.editReply({
                         content: locale['success.reset_all'],
@@ -432,7 +480,7 @@ settingsCommand.setExecute(async ({ interaction, locale, args }) => {
                         flags: MessageFlags.SuppressNotifications
                     });
                 } else {
-                    await D1Class.updateDiscordSetting(userRequestData, serverId, settingToReset, '');
+                    await D1Class.updateDiscordSetting(userRequestData, serverId, settingToReset, '0');
 
                     await interaction.editReply({
                         content: locale['success.reset'].replace('{setting}', settingToReset),
