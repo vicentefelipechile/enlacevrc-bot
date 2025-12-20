@@ -76,3 +76,37 @@ client.once(Events.ClientReady, async () => {
 // =================================================================================================
 
 client.login(DISCORD_TOKEN);
+
+// =================================================================================================
+// Graceful Shutdown Handlers
+// =================================================================================================
+
+/**
+ * Gracefully shutdown the bot when receiving termination signals
+ */
+async function gracefulShutdown(signal) {
+    // PrintMessage(`Received ${signal}, shutting down gracefully...`);
+    // Destroy the Discord client connection
+    client.destroy();
+    PrintMessage('Discord client disconnected successfully.');
+
+    // Exit the process
+    process.exit(0);
+}
+
+// Handle SIGINT (CTRL+C)
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle SIGTERM (kill command)
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    gracefulShutdown('uncaughtException');
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});

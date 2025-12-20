@@ -17,11 +17,49 @@ const PrintMessage = require('./print.js');
 const { VRCHAT_EMAIL_CONTACT, VRCHAT_APPLICATION_NAME, VRCHAT_USERNAME, VRCHAT_PASSWORD } = require('./env.js');
 
 // =================================================================================================
+// VRChat Extended Class
+// =================================================================================================
+
+/**
+ * Extended VRChat class with custom methods
+ */
+class VRChatExtended extends VRChat {
+  /**
+   * List ALL notifications for the current user (using /notifications endpoint)
+   * This endpoint returns more complete notification data than /auth/user/notifications
+   * @param {Object} options - Request options (e.g., { n: 10, offset: 0 })
+   * @returns {Promise} - Response with data array containing all notifications
+   */
+  async listNotifications(options = {}) {
+    return this._client.get({
+      url: "/notifications",
+      ...options
+    });
+  }
+
+  /**
+   * Respond to a group invitation
+   * @param {string} notificationId - ID of the notification
+   * @param {string} action - Action to perform ('accept' or 'decline')
+   * @returns {Promise} - Response from VRChat API
+   */
+  async respondToGroupInvite(notificationId, action) {
+    return this._client.put({
+      url: `/auth/user/notifications/${notificationId}/accept`,
+      data: {
+        responseType: action
+      }
+    });
+  }
+}
+
+
+// =================================================================================================
 // VRChat Client
 // =================================================================================================
 
 const COOKIE_FILE = 'data.json';
-const VRCHAT_CLIENT = new VRChat({
+const VRCHAT_CLIENT = new VRChatExtended({
   application: {
     contact: VRCHAT_EMAIL_CONTACT,
     name: VRCHAT_APPLICATION_NAME,
@@ -36,6 +74,8 @@ const VRCHAT_CLIENT = new VRChat({
   keyv: new KeyvFile({ filename: COOKIE_FILE }),
 });
 
+
+
 // =================================================================================================
 // Sign In Function
 // =================================================================================================
@@ -46,7 +86,6 @@ const VRCHAT_CLIENT = new VRChat({
  */
 async function SignIn() {
   try {
-
     const { data: currentUser } = await VRCHAT_CLIENT
       .getCurrentUser({ throwOnError: true })
       .catch(() => {
@@ -55,10 +94,14 @@ async function SignIn() {
           password: VRCHAT_PASSWORD,
           twoFactorCode: async () => {
             return new Promise((resolve) => {
-              createInterface({
+              const rl = createInterface({
                 input: process.stdin,
                 output: process.stdout,
-              }).question('Enter your 2FA code: ', resolve);
+              });
+              rl.question('Enter your 2FA code: ', (answer) => {
+                rl.close();
+                resolve(answer);
+              });
             });
           },
           throwOnError: true,
@@ -66,6 +109,10 @@ async function SignIn() {
       });
 
     PrintMessage(`Signed in as ${currentUser.displayName} (${currentUser.id})`);
+
+    const notifications = await VRCHAT_CLIENT.listNotifications();
+    PrintMessage(`Found ${notifications.data.length} notification(s)`);
+
 
     return VRCHAT_CLIENT;
   } catch (error) {
