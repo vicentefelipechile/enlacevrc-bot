@@ -9,7 +9,7 @@
 // Imports
 // =================================================================================================
 
-const { ApplicationCommandOptionType, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, Colors, ComponentType, MessageFlags, Locale, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, SectionBuilder, ThumbnailBuilder, AttachmentBuilder } = require('discord.js');
+const { ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType, MessageFlags, Locale, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, SectionBuilder, ThumbnailBuilder, AttachmentBuilder } = require('discord.js');
 const { ModularCommand, RegisterCommand } = require('js-discord-modularcommand');
 const { VRCHAT_CLIENT } = require('../vrchat.js');
 const NodeCache = require('node-cache');
