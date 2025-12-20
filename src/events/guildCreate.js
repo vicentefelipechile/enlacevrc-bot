@@ -19,10 +19,15 @@ async function OnServerAdded(guild) {
     const serverName = guild.name;
     const botUser = guild.client.user;
 
-    // User request data for the API, using the bot's identity
+    // Fetch audit logs to find who invited the bot
+    const fetchedLogs = await guild.fetchAuditLogs({ limit: 1, type: 28 }).catch(() => null);
+    const botEntry = fetchedLogs?.entries.find(entry => entry.target.id === botUser.id);
+    const inviter = botEntry ? botEntry.executor : botUser;
+
+    // User request data for the API, using the identity of who invited the bot
     const userRequestData = {
-        discord_id: botUser.id,
-        discord_name: botUser.username
+        discord_id: inviter.id,
+        discord_name: inviter.username
     };
 
     PrintMessage(`Joined new guild: ${serverName} (${serverId})`);
