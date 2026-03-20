@@ -1,6 +1,6 @@
 # EnlaceVRC Bot
 
-Main Discord bot for managing commands and events, including VRChat integration and modular command handling.
+Discord bot that links and verifies VRChat accounts within a Discord server. Users authenticate via VRChat bio verification — no passwords or third-party OAuth required. Built on Discord.js with a serverless backend powered by Cloudflare Workers and D1 as edge database.
 
 ---
 
