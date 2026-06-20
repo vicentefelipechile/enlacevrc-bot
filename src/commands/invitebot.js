@@ -33,6 +33,7 @@ const inviteButton = new ButtonBuilder()
     .setEmoji('📎');
 
 const avatarAttachment = new AttachmentBuilder('img/avatar.jpg', { name: 'avatar.jpg' });
+const avatarUrl = 'attachment://' + avatarAttachment.name;
 
 const inviteCommand = new ModularCommand('invite')
     .setDescription('Get the invite link for the bot.')
@@ -81,7 +82,7 @@ inviteCommand.setExecute(async ({ interaction, locale }) => {
                     new TextDisplayBuilder().setContent(contentText)
                 )
                 .setThumbnailAccessory(
-                    new ThumbnailBuilder().setURL('attachment://' + avatarAttachment.name)
+                    new ThumbnailBuilder().setURL(avatarUrl)
                 )
         )
         .addSeparatorComponents(

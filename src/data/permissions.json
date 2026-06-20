@@ -1,0 +1,195 @@
+[
+    {
+        "allowedToAdd": true,
+        "displayName": "Manage Group Member Data",
+        "help": "Allows role to view, filter by role, and sort all members and edit data about them.",
+        "isManagementPermission": true,
+        "name": "group-members-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Manage Group Data",
+        "help": "Allows role to edit group details (name, description, joinState, etc).",
+        "isManagementPermission": true,
+        "name": "group-data-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "View Audit log",
+        "help": "Allows role to view the full group audit log.",
+        "isManagementPermission": true,
+        "name": "group-audit-view"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Manage Group Roles",
+        "help": "Allows role to create roles, modify roles, and delete roles.",
+        "isManagementPermission": true,
+        "name": "group-roles-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "dependsOn": [
+            "group-roles-manage"
+        ],
+        "displayName": "Manage Group Default Role",
+        "help": "Allows role to manage the permissions for the default role (aka Everyone role).",
+        "isManagementPermission": true,
+        "name": "group-default-role-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "dependsOn": [
+            "group-members-manage"
+        ],
+        "displayName": "Assign Group Roles",
+        "help": "Allows role to assign/unassign roles to users.",
+        "isManagementPermission": true,
+        "name": "group-roles-assign"
+    },
+    {
+        "allowedToAdd": true,
+        "dependsOn": [
+            "group-members-manage"
+        ],
+        "displayName": "Manage Group Bans",
+        "help": "Allows role to ban/unban users and view all banned users.",
+        "isManagementPermission": true,
+        "name": "group-bans-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "dependsOn": [
+            "group-members-manage"
+        ],
+        "displayName": "Remove Group Members",
+        "help": "Allows role to remove someone from the group.",
+        "isManagementPermission": true,
+        "name": "group-members-remove"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "View All Members",
+        "help": "Allows role to view all members in a group, not just friends.",
+        "isManagementPermission": false,
+        "name": "group-members-viewall"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Manage Group Announcement",
+        "help": "Allows role to set/clear group announcement and send it as a notification.",
+        "isManagementPermission": false,
+        "name": "group-announcement-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Manage Group Calendar",
+        "help": "Allows role to create, modify, and publish calendar entries.",
+        "isManagementPermission": false,
+        "name": "group-calendar-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Manage Group Galleries",
+        "help": "Allows role to create, reorder, edit, and delete group galleries. Can always submit to galleries, and can approve images.",
+        "isManagementPermission": false,
+        "name": "group-galleries-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Manage Group Invites",
+        "help": "Allows role to create/cancel invites, as well as accept/decline/block join requests.",
+        "isManagementPermission": false,
+        "name": "group-invites-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Moderate Group Instances",
+        "help": "Allows role to moderate within a group instance.",
+        "isManagementPermission": true,
+        "name": "group-instance-moderate"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Manage Group Instances",
+        "help": "Allows role to rename or close a group instance.",
+        "isManagementPermission": true,
+        "name": "group-instance-manage"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Group Instance Queue Priority",
+        "help": "Gives role priority for group instance queues.",
+        "isManagementPermission": false,
+        "name": "group-instance-queue-priority"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Create Age Gated Instances",
+        "help": "Allows role to create group instances that require users to have age verified and be 18 or above in order to join.",
+        "isManagementPermission": false,
+        "name": "group-instance-age-gated-create"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Create Linked Instances",
+        "help": "Allows role to create group instances linked live events, events starting within 6 hours, and events that have ended within 6 hours.",
+        "isManagementPermission": false,
+        "name": "group-instance-calendar-link"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Create Group Public Instances",
+        "help": "Allows role to create group instances that are open to all, member or not. NOTE: Private groups cannot create public instances.",
+        "isManagementPermission": false,
+        "name": "group-instance-public-create"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Create Group+ Instances",
+        "help": "Allows role to create group instances that friends of people present can also join.",
+        "isManagementPermission": false,
+        "name": "group-instance-plus-create"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Create Members-Only Group Instances",
+        "help": "Allows role to create members-only instances.",
+        "isManagementPermission": false,
+        "name": "group-instance-open-create"
+    },
+    {
+        "allowedToAdd": true,
+        "dependsOn": [
+            "group-instance-open-create"
+        ],
+        "displayName": "Role-Restrict Members-Only Instances",
+        "help": "Allows role to add/remove/modify role restrictions on members-only instances.",
+        "isManagementPermission": false,
+        "name": "group-instance-restricted-create"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Portal to Group+ Instances",
+        "help": "Allows role to open locked portals to Group+ instances. Members, friends of people there, and friends of the portal dropper may enter unless group-banned.",
+        "isManagementPermission": false,
+        "name": "group-instance-plus-portal"
+    },
+    {
+        "allowedToAdd": true,
+        "dependsOn": [
+            "group-instance-plus-portal"
+        ],
+        "displayName": "Unlocked Portal to Group+ Instances",
+        "help": "Allows role to open unlocked portals to Group+ instances. Everyone except group-banned people may enter.",
+        "isManagementPermission": false,
+        "name": "group-instance-plus-portal-unlocked"
+    },
+    {
+        "allowedToAdd": true,
+        "displayName": "Join Group Instances",
+        "help": "Allows role to join group instances.",
+        "isManagementPermission": false,
+        "name": "group-instance-join"
+    }
+]

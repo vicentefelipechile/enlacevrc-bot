@@ -15,6 +15,7 @@ const { D1Class } = require("../d1class");
 const DISCORD_SERVER_SETTINGS = require("../discordsettings");
 const { VRCHAT_CLIENT } = require("../vrchat");
 const { VRCHAT_APPLICATION_NAME } = require("../env");
+const PrintMessage = require("../print");
 
 // =================================================================================================
 // Variables
@@ -315,6 +316,14 @@ const buttonInvited = linkGroupCommand.addButton('invited', async ({ interaction
                 groupData = group;
                 break;
             }
+
+            // Verificar si tiene permisos de administrador
+            const user = interaction.guild.members.cache.get(userId);
+            if (user !== undefined && user.permissions.has(PermissionFlagsBits.Administrator)) {
+                validInvite = invite;
+                groupData = group;
+                break;
+            }
         }
 
         if (!validInvite) {
@@ -481,7 +490,11 @@ const buttonAcceptTerms = linkGroupCommand.addButton('acceptterms', async ({ int
             .addSectionComponents(
                 new SectionBuilder()
                     .addTextDisplayComponents(
-                        new TextDisplayBuilder({ content: locale['success.title'] })
+                        new TextDisplayBuilder({
+                            content:
+                                '# ' + locale['success.title'] + '\n' +
+                                locale['success.description'].replace('{groupName}', state.groupName)
+                        })
                     )
                     .setThumbnailAccessory(
                         new ThumbnailBuilder({
@@ -491,18 +504,14 @@ const buttonAcceptTerms = linkGroupCommand.addButton('acceptterms', async ({ int
                         })
                     )
             )
-            .addSeparatorComponents(
-                new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
-            )
-            .addTextDisplayComponents(
-                new TextDisplayBuilder({ content: locale['success.description'].replace('{groupName}', state.groupName) })
-            )
 
         await interaction.editReply({
             components: [component],
             files: [successImage],
             flags: MessageFlags.IsComponentsV2
         });
+
+        PrintMessage(`Joined group ${state.groupName} by ${interaction.user.username} (${interaction.user.id})`);
 
         const embed = new EmbedBuilder()
             .setTitle(locale['log.action.title'].replace('{groupName}', state.groupName))

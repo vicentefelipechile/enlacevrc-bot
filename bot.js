@@ -42,6 +42,7 @@ const client = new Client({
 // =================================================================================================
 
 client.commands = new Collection();
+client.vrchatGroups = new Collection();
 
 const commandPath = join(__dirname, 'src', 'commands');
 const commandFiles = readdirSync(commandPath).filter(file => file.endsWith('.js'));
@@ -64,11 +65,62 @@ for (const cmd of commands) {
 
 client.on(Events.InteractionCreate, ModularCommandHandler(client));
 
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isAutocomplete()) return;
+
+    const commandName = interaction.commandName;
+    const focusedOption = interaction.options.getFocused(true);
+
+    if (commandName === 'group' && focusedOption.name === 'group') {
+        const guildId = interaction.guildId;
+        const userTextInput = focusedOption.value.toLowerCase();
+
+        const vrchatGroupsData = client.vrchatGroups.get(guildId);
+        const vrchatGroups = [];
+
+        for (const group of vrchatGroupsData) {
+            if (group.group_name.toLowerCase().includes(userTextInput)) {
+                vrchatGroups.push({
+                    name: group.group_name,
+                    value: group.vrchat_group_id,
+                });
+            }
+        }
+
+        const filteredGroups = vrchatGroups.slice(0, 25);
+
+        try {
+            await interaction.respond(filteredGroups);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+})
+
 client.on(Events.GuildCreate, OnServerAdded);
 
 client.once(Events.ClientReady, async () => {
     PrintMessage(`Logged in as ${client.user.tag}`);
     await SignIn();
+
+    const discordServers = await D1Class.listDiscordServers({
+        discord_id: client.user.id,
+        discord_name: client.user.username,
+    });
+
+    for (const server of discordServers) {
+        client.vrchatGroups.set(server.discord_server_id, []);
+    }
+
+    for (const server of discordServers) {
+        const vrchatGroupsData = await D1Class.listVRChatGroups({
+            discord_id: client.user.id,
+            discord_name: client.user.username,
+        }, server.discord_server_id);
+        client.vrchatGroups.set(server.discord_server_id, vrchatGroupsData);
+    }
+
+    PrintMessage(`Cached ${client.vrchatGroups.size} vrchat groups`);
 });
 
 // =================================================================================================

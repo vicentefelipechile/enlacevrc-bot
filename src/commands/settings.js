@@ -154,6 +154,10 @@ settingsCommand.setLocalizationPhrases({
         'view.not_set': 'Not set',
         'view.enabled': 'Enabled',
         'view.disabled': 'Disabled',
+        'reset.verification_role': 'Verification Role',
+        'reset.verification_plus_role': '18+ Verification Role',
+        'reset.auto_nickname': 'Auto Nickname',
+        'reset.log_channel': 'Log Channel',
     },
     [Locale.SpanishLATAM]: {
         'error.permission': 'Necesitas el permiso "Administrar Servidor" para usar este comando.',
@@ -178,6 +182,10 @@ settingsCommand.setLocalizationPhrases({
         'view.not_set': 'No establecido',
         'view.enabled': 'Habilitado',
         'view.disabled': 'Deshabilitado',
+        'reset.verification_role': 'Rol de Verificación',
+        'reset.verification_plus_role': 'Rol de Verificación +18',
+        'reset.auto_nickname': 'Apodo Automático',
+        'reset.log_channel': 'Canal de Log',
     },
     [Locale.SpanishES]: {
         'error.permission': '¡A ver, tronco! Necesitas el permiso de "Administrar Servidor" para meter mano aquí.',
@@ -202,6 +210,10 @@ settingsCommand.setLocalizationPhrases({
         'view.not_set': 'Ni puesto, macho',
         'view.enabled': 'Activado',
         'view.disabled': 'Desactivado',
+        'reset.verification_role': 'Rol de Verificación',
+        'reset.verification_plus_role': 'Rol de Verificación +18',
+        'reset.auto_nickname': 'Apodo Automático',
+        'reset.log_channel': 'Canal de Log',
     }
 });
 
@@ -401,9 +413,9 @@ settingsCommand.setExecute(async ({ interaction, locale, args }) => {
 
             case SUBCOMMANDS_NAME.AUTO_NICKNAME: {
                 const enabled = args['enabled'];
-                await D1Class.updateDiscordSetting(userRequestData, serverId, SUBCOMMANDS_NAME.AUTO_NICKNAME, enabled.toString());
+                await D1Class.updateDiscordSetting(userRequestData, serverId, SUBCOMMANDS_NAME.AUTO_NICKNAME, enabled);
                 await interaction.editReply({
-                    content: locale['success.auto_nickname'].replace('{status}', status),
+                    content: locale['success.auto_nickname'].replace('{status}', enabled),
                     embeds: [],
                     flags: MessageFlags.SuppressNotifications
                 });
@@ -483,7 +495,7 @@ settingsCommand.setExecute(async ({ interaction, locale, args }) => {
                     await D1Class.updateDiscordSetting(userRequestData, serverId, settingToReset, '0');
 
                     await interaction.editReply({
-                        content: locale['success.reset'].replace('{setting}', settingToReset),
+                        content: locale['success.reset'].replace('{setting}', locale['reset.' + settingToReset]),
                         embeds: [],
                         flags: MessageFlags.SuppressNotifications
                     });

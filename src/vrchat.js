@@ -98,7 +98,7 @@ async function HandleNotifications(notifications) {
           }
         }
 
-        if (!declineData) {
+        if (declineData === null) {
           PrintMessage(`No reject info found for notification "${notification.id}" wtf?`);
           continue;
         }
@@ -125,7 +125,7 @@ async function HandleNotifications(notifications) {
           }
         }
 
-        if (!markAsReadData) {
+        if (markAsReadData === null) {
           PrintMessage(`No mark as read info found for notification "${notification.id}" wtf?`);
           continue;
         }
@@ -140,7 +140,7 @@ async function HandleNotifications(notifications) {
           },
         });
 
-        PrintMessage(`Marked as read group announcement from "${notification.data.announcementTitle}"`);
+        PrintMessage(`Marked as read announcement "${notification.data.announcementTitle}" from group "${notification.data.groupName}"`);
         break;
 
       default:
