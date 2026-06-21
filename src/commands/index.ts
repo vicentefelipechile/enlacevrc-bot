@@ -10,8 +10,6 @@
 // Imports
 // =========================================================================================================
 
-import { command as adduser } from "./adduser.js";
-import { command as ban } from "./ban.js";
 import { command as group } from "./group.js";
 import { command as howitworks } from "./howitworks.js";
 import { command as invite } from "./invite.js";
@@ -19,11 +17,10 @@ import { command as linkgroup } from "./linkgroup.js";
 import { command as profile } from "./profile.js";
 import { command as search } from "./search.js";
 import { command as settings } from "./settings.js";
+import { command as staff } from "./staff/index.js";
 import { command as sync } from "./sync.js";
 import type { Command } from "./types.js";
-import { command as unban } from "./unban.js";
 import { commands as verificationCommands } from "./verification.js";
-import { command as verifyuser } from "./verifyuser.js";
 import { command as viewprofile } from "./viewprofile.js";
 import { command as worldinfo } from "./worldinfo.js";
 
@@ -33,8 +30,6 @@ import { command as worldinfo } from "./worldinfo.js";
 
 /** Every command the bot exposes, flattened (verification contributes two commands). */
 export const allCommands: Command[] = [
-  adduser,
-  ban,
   group,
   howitworks,
   invite,
@@ -42,9 +37,8 @@ export const allCommands: Command[] = [
   profile,
   search,
   settings,
+  staff,
   sync,
-  unban,
-  verifyuser,
   viewprofile,
   worldinfo,
   ...verificationCommands,

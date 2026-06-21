@@ -1,29 +1,34 @@
 // =========================================================================================================
-// Add User Command
+// /staff user add
 // =========================================================================================================
-// Staff-only command to link a Discord user with a VRChat profile: validates the VRChat ID, ensures
-// neither side is already linked, fetches the VRChat user, creates the profile and applies the server's
-// verification role / auto-nickname settings.
+// Links a Discord user with a VRChat profile: validates the VRChat ID, ensures neither side is already
+// linked, fetches the VRChat user, creates the profile and applies the server's verification role /
+// auto-nickname settings.
 
 // =========================================================================================================
 // Imports
 // =========================================================================================================
 
-import { Colors, EmbedBuilder, Locale, SlashCommandBuilder } from "discord.js";
-import type { ChatInputCommandInteraction } from "discord.js";
+import { Colors, EmbedBuilder, Locale } from "discord.js";
+import type {
+  ChatInputCommandInteraction,
+  SlashCommandSubcommandGroupBuilder,
+} from "discord.js";
 
-import type { Command } from "./types.js";
-import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
-import { createLocalizer } from "../lib/i18n.js";
-import { printMessage } from "../lib/logger.js";
-import { getVRChatId } from "../lib/vrchat-code.js";
-import { D1Class } from "../services/d1.js";
-import { VRCHAT_CLIENT } from "../services/vrchat.js";
-
+import { DISCORD_SERVER_SETTINGS } from "../../constants/discord-settings.js";
+import { createLocalizer } from "../../lib/i18n.js";
+import { printMessage } from "../../lib/logger.js";
+import { getVRChatId } from "../../lib/vrchat-code.js";
+import { D1Class } from "../../services/d1.js";
+import { VRCHAT_CLIENT } from "../../services/vrchat.js";
+import type { UserRequestData } from "../../types/models.js";
+import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
 // Constants
 // =========================================================================================================
+
+export const NAME = "add";
 
 const VRCHAT_ID_REGEX = /^usr_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const AUTO_NICKNAME_ENABLED = "1";
@@ -36,7 +41,6 @@ const localize = createLocalizer({
     "error.user_exists": "This Discord user is already verified with a VRChat account.",
     "error.vrchat_not_found":
       "Could not find a VRChat user with the ID `{vrchat_id}`. Please verify the ID is correct.",
-    "error.no_permission": "You do not have permission to use this command.",
     "error.general": "An error occurred while trying to add the user. Please try again later.",
     checking_profile: "🔍 Checking if the profile already exists...",
     fetching_vrchat: "🔍 Fetching VRChat user information...",
@@ -54,7 +58,6 @@ const localize = createLocalizer({
     "error.user_exists": "Este usuario de Discord ya está verificado con una cuenta de VRChat.",
     "error.vrchat_not_found":
       "No se pudo encontrar un usuario de VRChat con el ID `{vrchat_id}`. Por favor, verifica que el ID sea correcto.",
-    "error.no_permission": "No tienes permisos para utilizar este comando.",
     "error.general":
       "Ocurrió un error al intentar agregar el usuario. Por favor, inténtalo de nuevo más tarde.",
     checking_profile: "🔍 Verificando si el perfil ya existe...",
@@ -73,7 +76,6 @@ const localize = createLocalizer({
     "error.user_exists": "¡Oye, que este usuario de Discord ya está verificado con una cuenta de VRChat!",
     "error.vrchat_not_found":
       "¡Joder! No hay ni dios en VRChat con el ID `{vrchat_id}`. Revisa que lo has puesto bien, anda.",
-    "error.no_permission": "¡Joder tío, no tienes permisos pa usar este comando, chaval!",
     "error.general": "¡Ay madre! Algo ha petao al intentar agregar al usuario. Dale un rato y prueba otra vez.",
     checking_profile: "🔍 Mirando a ver si el perfil ya existe...",
     fetching_vrchat: "🔍 Pillando la info del usuario de VRChat...",
@@ -90,7 +92,7 @@ const localize = createLocalizer({
 // Types
 // =========================================================================================================
 
-/** Subset of the VRChat user object this command reads. */
+/** Subset of the VRChat user object this subcommand reads. */
 interface VRChatUser {
   displayName?: string;
   profilePicOverride?: string;
@@ -101,51 +103,82 @@ interface VRChatUser {
 // Helpers
 // =========================================================================================================
 
-/** True when the invoking user is registered staff. */
-async function isStaff(userId: string, username: string): Promise<boolean> {
+/** True when the string matches the canonical VRChat user ID format. */
+function isValidVRChatId(vrchatId: string): boolean {
+  return VRCHAT_ID_REGEX.test(vrchatId);
+}
+
+/** Returns true when a profile exists for the given key, swallowing the not-found error. */
+async function profileExists(userRequestData: UserRequestData, key: string): Promise<boolean> {
   try {
-    const staff = await D1Class.getStaff({ discord_id: userId, discord_name: username }, userId);
-    return staff !== null;
+    await D1Class.getProfile(userRequestData, key, false);
+    return true;
   } catch {
     return false;
   }
 }
 
-/** True when the string matches the canonical VRChat user ID format. */
-function isValidVRChatId(vrchatId: string): boolean {
-  return VRCHAT_ID_REGEX.test(vrchatId);
+/** Applies the server's verification role and auto-nickname settings to the linked member. */
+async function applyServerSettings(
+  interaction: ChatInputCommandInteraction,
+  userRequestData: UserRequestData,
+  memberId: string,
+  displayName: string,
+): Promise<void> {
+  const guild = interaction.guild;
+  if (!guild) {
+    return;
+  }
+
+  const settings = await D1Class.getAllDiscordSettings(userRequestData, guild.id);
+  const member = await guild.members.fetch(memberId);
+
+  const verificationRoleId = settings[DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE];
+  if (verificationRoleId) {
+    const role = guild.roles.cache.get(verificationRoleId);
+    if (role) {
+      await member.roles.add(role);
+    }
+  }
+
+  if (settings[DISCORD_SERVER_SETTINGS.AUTO_NICKNAME] === AUTO_NICKNAME_ENABLED) {
+    try {
+      await member.setNickname(displayName);
+    } catch {
+      // Ignore nickname errors (e.g. the target outranks the bot).
+    }
+  }
 }
 
 // =========================================================================================================
 // Main
 // =========================================================================================================
 
-const data = new SlashCommandBuilder()
-  .setName("adduser")
-  .setDescription("Link a Discord user with their VRChat profile. (Staff Only)")
-  .setDescriptionLocalizations({
-    [Locale.SpanishLATAM]: "Vincula un usuario de Discord con su perfil de VRChat.",
-    [Locale.SpanishES]: "Tronco, este comando vincula a un pavo de Discord con su perfil de VRChat.",
-  })
-  .addUserOption((opt) =>
-    opt.setName("user").setDescription("The Discord user to link.").setRequired(true),
-  )
-  .addStringOption((opt) =>
-    opt
-      .setName("vrchat_id")
-      .setDescription("The VRChat user ID (format: usr_XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX).")
-      .setRequired(true),
+/** Adds the `add` subcommand to the `user` group. */
+export function build(group: SlashCommandSubcommandGroupBuilder): SlashCommandSubcommandGroupBuilder {
+  return group.addSubcommand((sub) =>
+    sub
+      .setName(NAME)
+      .setDescription("Link a Discord user with their VRChat profile.")
+      .setDescriptionLocalizations({
+        [Locale.SpanishLATAM]: "Vincula un usuario de Discord con su perfil de VRChat.",
+        [Locale.SpanishES]: "Vincula a un pavo de Discord con su perfil de VRChat, tronco.",
+      })
+      .addUserOption((opt) =>
+        opt.setName("user").setDescription("The Discord user to link.").setRequired(true),
+      )
+      .addStringOption((opt) =>
+        opt
+          .setName("vrchat_id")
+          .setDescription("The VRChat user ID (format: usr_XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX).")
+          .setRequired(true),
+      ),
   );
+}
 
-async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  await interaction.deferReply();
-
+/** Runs `/staff user add`. The staff gate has already passed in the router. */
+export async function run(interaction: ChatInputCommandInteraction): Promise<void> {
   const phrases = localize(interaction.locale);
-
-  if (!(await isStaff(interaction.user.id, interaction.user.username))) {
-    await interaction.editReply({ content: phrases["error.no_permission"] });
-    return;
-  }
 
   if (!interaction.guild) {
     await interaction.editReply({ content: phrases["error.general"] });
@@ -161,10 +194,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
     return;
   }
 
-  const userRequestData = {
-    discord_id: interaction.user.id,
-    discord_name: interaction.user.username,
-  };
+  const userRequestData = staffRequestData(interaction.user.id, interaction.user.username);
 
   try {
     await interaction.editReply({ content: phrases.checking_profile });
@@ -219,54 +249,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
     await interaction.editReply({ content: null, embeds: [successEmbed] });
   } catch (error) {
-    printMessage("AddUser command error:", String(error));
+    printMessage("staff user add error:", String(error));
     await interaction.editReply({ content: phrases["error.general"] });
   }
 }
-
-/** Returns true when a profile exists for the given key, swallowing the not-found error. */
-async function profileExists(
-  userRequestData: { discord_id: string; discord_name: string },
-  key: string,
-): Promise<boolean> {
-  try {
-    await D1Class.getProfile(userRequestData, key, false);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Applies the server's verification role and auto-nickname settings to the linked member. */
-async function applyServerSettings(
-  interaction: ChatInputCommandInteraction,
-  userRequestData: { discord_id: string; discord_name: string },
-  memberId: string,
-  displayName: string,
-): Promise<void> {
-  const guild = interaction.guild;
-  if (!guild) {
-    return;
-  }
-
-  const settings = await D1Class.getAllDiscordSettings(userRequestData, guild.id);
-  const member = await guild.members.fetch(memberId);
-
-  const verificationRoleId = settings[DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE];
-  if (verificationRoleId) {
-    const role = guild.roles.cache.get(verificationRoleId);
-    if (role) {
-      await member.roles.add(role);
-    }
-  }
-
-  if (settings[DISCORD_SERVER_SETTINGS.AUTO_NICKNAME] === AUTO_NICKNAME_ENABLED) {
-    try {
-      await member.setNickname(displayName);
-    } catch {
-      // Ignore nickname errors (e.g. the target outranks the bot).
-    }
-  }
-}
-
-export const command: Command = { data, execute };

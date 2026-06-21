@@ -1,32 +1,33 @@
 // =========================================================================================================
-// Verify User Command
+// /staff user verify
 // =========================================================================================================
-// Staff-only command to grant a member the server's 18+ verification role, ensuring they have a linked
-// VRChat profile and the base verification role first, and marking them 18+ verified in the database.
+// Grants a member the server's 18+ verification role, ensuring they have a linked VRChat profile and the
+// base verification role first, and marking them 18+ verified in the database.
 
 // =========================================================================================================
 // Imports
 // =========================================================================================================
 
-import {
-  AttachmentBuilder,
-  Colors,
-  EmbedBuilder,
-  Locale,
-  SlashCommandBuilder,
+import { AttachmentBuilder, Colors, EmbedBuilder, Locale, PermissionsBitField } from "discord.js";
+import type {
+  ChatInputCommandInteraction,
+  GuildMember,
+  Role,
+  SlashCommandSubcommandGroupBuilder,
 } from "discord.js";
-import type { ChatInputCommandInteraction, GuildMember } from "discord.js";
 
-import type { Command } from "./types.js";
-import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
-import { createLocalizer } from "../lib/i18n.js";
-import { getRandomColor } from "../lib/random-color.js";
-import { D1Class } from "../services/d1.js";
-import type { Profile } from "../types/models.js";
+import { DISCORD_SERVER_SETTINGS } from "../../constants/discord-settings.js";
+import { createLocalizer } from "../../lib/i18n.js";
+import { getRandomColor } from "../../lib/random-color.js";
+import { D1Class } from "../../services/d1.js";
+import type { Profile } from "../../types/models.js";
+import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
 // Constants
 // =========================================================================================================
+
+export const NAME = "verify";
 
 const ERROR_IMAGE_FILE = "img/error.jpg";
 const ERROR_IMAGE_NAME = "error.jpg";
@@ -37,7 +38,6 @@ const STAFF_VERIFICATION_ID = 1;
 
 const localize = createLocalizer({
   [Locale.EnglishUS]: {
-    "error.no_permission": "You do not have permission to use this command.",
     "error.user_not_verified_title": "❌ VRChat Account Not Linked",
     "error.user_not_verified":
       "The user must link their VRChat account to their Discord account before receiving +18 verification.",
@@ -48,6 +48,11 @@ const localize = createLocalizer({
     "error.assignment_failed_title": "❌ Role Assignment Failed",
     "error.failed_to_assign": "Failed to assign the +18 verification role to the user.",
     "error.chat_is_dm": "This command can only be used in a server.",
+    "error.bot_no_perm_title": "❌ Missing Permission",
+    "error.bot_no_perm": 'I do not have the "Manage Roles" permission in this server.',
+    "error.role_hierarchy_title": "❌ Role Hierarchy",
+    "error.role_hierarchy":
+      "I cannot manage the role **{role}** because it is positioned above my highest role. Please move my role above it in the server settings.",
     "success.title": "✅ User Verified for +18 Access",
     "success.description":
       "Successfully verified **{username}** for +18 access and assigned the role.",
@@ -57,7 +62,6 @@ const localize = createLocalizer({
       "The user **{username}** is already verified for +18 access and now has the role.",
   },
   [Locale.SpanishLATAM]: {
-    "error.no_permission": "No tienes permisos para utilizar este comando.",
     "error.user_not_verified_title": "❌ Cuenta de VRChat No Vinculada",
     "error.user_not_verified":
       "El usuario debe vincular su cuenta de VRChat con su cuenta de Discord antes de recibir la verificación +18.",
@@ -68,6 +72,11 @@ const localize = createLocalizer({
     "error.assignment_failed_title": "❌ Fallo al Asignar Rol",
     "error.failed_to_assign": "No se pudo asignar el rol de verificación +18 al usuario.",
     "error.chat_is_dm": "Este comando solo puede ser utilizado en un servidor.",
+    "error.bot_no_perm_title": "❌ Permiso Faltante",
+    "error.bot_no_perm": 'No tengo el permiso "Gestionar Roles" en este servidor.',
+    "error.role_hierarchy_title": "❌ Jerarquía de Roles",
+    "error.role_hierarchy":
+      "No puedo gestionar el rol **{role}** porque está por encima de mi rol más alto. Por favor, mueve mi rol por encima de él en la configuración del servidor.",
     "success.title": "✅ Usuario Verificado para Acceso +18",
     "success.description":
       "Se verificó exitosamente a **{username}** para acceso +18 y se asignó el rol.",
@@ -77,7 +86,6 @@ const localize = createLocalizer({
       "El usuario **{username}** ya está verificado para el Acceso +18, se le ha dado el rol.",
   },
   [Locale.SpanishES]: {
-    "error.no_permission": "¡Joder tío, no tienes permisos pa usar este comando, chaval!",
     "error.user_not_verified_title": "❌ ¡Cuéntame, la Cuenta de VRChat No Está Vinculá, eh!",
     "error.user_not_verified":
       "¡Joder, vaya tela! El fulano tiene que vincular su cuenta de VRChat con Discord antes de que le dé la verificación +18.",
@@ -90,6 +98,11 @@ const localize = createLocalizer({
     "error.failed_to_assign":
       "¡Ay, que no se pudo asignar el rol, tío! ¡Joder, qué cosa tan rara! ¡Madre mía!",
     "error.chat_is_dm": "¡Pero huele que estás en un DM, tío! ¡Madre mía!",
+    "error.bot_no_perm_title": "❌ ¡Me Falta un Permiso, Joder!",
+    "error.bot_no_perm": '¡Ostras, tío! ¡Que no tengo el permiso de "Gestionar Roles" en el servidor!',
+    "error.role_hierarchy_title": "❌ ¡La Jerarquía Está Liá, Chaval!",
+    "error.role_hierarchy":
+      "¡Joder, tío! No puedo tocar el rol **{role}** porque está por encima del mío. ¡Mueve mi rol por encima de él en la config del servidor, anda!",
     "success.title": "✅ ¡Tío Verificao Pa los +18, Olé!",
     "success.description":
       "¡Vaya! ¡Ostras, chaval! Se verificó exitosamente a **{username}** pa acceso +18 y se le asignó el rol.",
@@ -109,16 +122,6 @@ type Phrases = ReturnType<typeof localize>;
 // =========================================================================================================
 // Helpers
 // =========================================================================================================
-
-/** True when the invoking user is registered staff. */
-async function isStaff(userId: string, username: string): Promise<boolean> {
-  try {
-    const staff = await D1Class.getStaff({ discord_id: userId, discord_name: username }, userId);
-    return staff !== null;
-  } catch {
-    return false;
-  }
-}
 
 function errorEmbed(title: string, description?: string): EmbedBuilder {
   const embed = new EmbedBuilder()
@@ -156,27 +159,26 @@ function successEmbed(
 // Main
 // =========================================================================================================
 
-const data = new SlashCommandBuilder()
-  .setName("verifyuser")
-  .setDescription("Verify a user for +18 access (Moderator only).")
-  .setDescriptionLocalizations({
-    [Locale.SpanishLATAM]: "Verificar un usuario para acceso +18 (Solo moderadores).",
-    [Locale.SpanishES]: "¡Verificar un tío para acceso +18 (Solo moderadores, joder)!",
-  })
-  .addUserOption((opt) =>
-    opt.setName("user").setDescription("The user to verify for +18 access.").setRequired(true),
+/** Adds the `verify` subcommand to the `user` group. */
+export function build(group: SlashCommandSubcommandGroupBuilder): SlashCommandSubcommandGroupBuilder {
+  return group.addSubcommand((sub) =>
+    sub
+      .setName(NAME)
+      .setDescription("Verify a user for +18 access.")
+      .setDescriptionLocalizations({
+        [Locale.SpanishLATAM]: "Verificar un usuario para acceso +18.",
+        [Locale.SpanishES]: "Verificar a un tío para acceso +18, joder.",
+      })
+      .addUserOption((opt) =>
+        opt.setName("user").setDescription("The user to verify for +18 access.").setRequired(true),
+      ),
   );
+}
 
-async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  await interaction.deferReply();
-
+/** Runs `/staff user verify`. The staff gate has already passed in the router. */
+export async function run(interaction: ChatInputCommandInteraction): Promise<void> {
   const phrases = localize(interaction.locale);
   const errorImage = new AttachmentBuilder(ERROR_IMAGE_FILE, { name: ERROR_IMAGE_NAME });
-
-  if (!(await isStaff(interaction.user.id, interaction.user.username))) {
-    await interaction.editReply({ content: phrases["error.no_permission"] });
-    return;
-  }
 
   if (!interaction.guild) {
     await interaction.editReply({
@@ -190,10 +192,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   const targetUser = interaction.options.getUser("user", true);
   const member = await guild.members.fetch(targetUser.id);
 
-  const userRequestData = {
-    discord_id: interaction.user.id,
-    discord_name: interaction.user.username,
-  };
+  const userRequestData = staffRequestData(interaction.user.id, interaction.user.username);
 
   let profileData: Profile;
   try {
@@ -224,6 +223,33 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   if (!verificationRole || !verificationPlusRole) {
     await interaction.editReply({
       embeds: [errorEmbed(phrases["error.role_not_found_title"], phrases["error.role_not_found"])],
+      files: [errorImage],
+    });
+    return;
+  }
+
+  // The bot needs Manage Roles and must sit above both roles it adds/removes, otherwise Discord
+  // returns 50013 (Missing Permissions). Check up front so we report a clear, localized cause.
+  const botMember = await guild.members.fetchMe();
+  if (!botMember.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+    await interaction.editReply({
+      embeds: [errorEmbed(phrases["error.bot_no_perm_title"], phrases["error.bot_no_perm"])],
+      files: [errorImage],
+    });
+    return;
+  }
+
+  const unmanageableRole: Role | undefined = [verificationRole, verificationPlusRole].find(
+    (role) => botMember.roles.highest.position <= role.position,
+  );
+  if (unmanageableRole) {
+    await interaction.editReply({
+      embeds: [
+        errorEmbed(
+          phrases["error.role_hierarchy_title"],
+          phrases["error.role_hierarchy"].replace("{role}", unmanageableRole.name),
+        ),
+      ],
       files: [errorImage],
     });
     return;
@@ -303,5 +329,3 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
     });
   }
 }
-
-export const command: Command = { data, execute };

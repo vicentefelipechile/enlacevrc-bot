@@ -1,29 +1,28 @@
 // =========================================================================================================
-// Unban Command
+// /staff user unban
 // =========================================================================================================
-// Staff-only command to unban a user from the EnlaceVRC database (not from Discord).
+// Unbans a user from the EnlaceVRC database (not from Discord).
 
 // =========================================================================================================
 // Imports
 // =========================================================================================================
 
-import {
-  AttachmentBuilder,
-  Colors,
-  EmbedBuilder,
-  Locale,
-  SlashCommandBuilder,
+import { AttachmentBuilder, Colors, EmbedBuilder, Locale } from "discord.js";
+import type {
+  ChatInputCommandInteraction,
+  SlashCommandSubcommandGroupBuilder,
 } from "discord.js";
-import type { ChatInputCommandInteraction } from "discord.js";
 
-import type { Command } from "./types.js";
-import { createLocalizer } from "../lib/i18n.js";
-import { printMessage } from "../lib/logger.js";
-import { D1Class } from "../services/d1.js";
+import { createLocalizer } from "../../lib/i18n.js";
+import { printMessage } from "../../lib/logger.js";
+import { D1Class } from "../../services/d1.js";
+import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
 // Constants
 // =========================================================================================================
+
+export const NAME = "unban";
 
 const ERROR_IMAGE_FILE = "img/error.jpg";
 const ERROR_IMAGE_NAME = "error.jpg";
@@ -31,7 +30,6 @@ const ERROR_IMAGE_URL = `attachment://${ERROR_IMAGE_NAME}`;
 
 const localize = createLocalizer({
   [Locale.EnglishUS]: {
-    "error.no_permission": "You do not have permission to use this command.",
     "error.user_not_found_title": "❌ User Not Found",
     "error.user_not_found": "User profile not found in the database.",
     "error.not_banned_title": "❌ Not Banned",
@@ -43,7 +41,6 @@ const localize = createLocalizer({
     "success.footer": "Unbanned by {moderator}",
   },
   [Locale.SpanishLATAM]: {
-    "error.no_permission": "No tienes permisos para utilizar este comando.",
     "error.user_not_found_title": "❌ Usuario No Encontrado",
     "error.user_not_found": "Perfil de usuario no encontrado en la base de datos.",
     "error.not_banned_title": "❌ No Está Baneado",
@@ -55,7 +52,6 @@ const localize = createLocalizer({
     "success.footer": "Desbaneado por {moderator}",
   },
   [Locale.SpanishES]: {
-    "error.no_permission": "¡Joder tío, no tienes permisos pa usar este comando, chaval!",
     "error.user_not_found_title": "❌ ¡Que Desaparece el Usuario, Joder!",
     "error.user_not_found":
       "¡Ay, madre mía! ¡Ostras! No encontramos el perfil del tío en la base de datos, macho.",
@@ -76,16 +72,6 @@ const localize = createLocalizer({
 // Helpers
 // =========================================================================================================
 
-/** True when the invoking user is registered staff. */
-async function isStaff(userId: string, username: string): Promise<boolean> {
-  try {
-    const staff = await D1Class.getStaff({ discord_id: userId, discord_name: username }, userId);
-    return staff !== null;
-  } catch {
-    return false;
-  }
-}
-
 function buildErrorEmbed(title: string, description: string, color: number): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle(title)
@@ -99,37 +85,30 @@ function buildErrorEmbed(title: string, description: string, color: number): Emb
 // Main
 // =========================================================================================================
 
-const data = new SlashCommandBuilder()
-  .setName("unban")
-  .setDescription("Unban a user from the database (Staff only).")
-  .setDescriptionLocalizations({
-    [Locale.SpanishLATAM]: "Desbanear un usuario de la base de datos (Solo staff).",
-    [Locale.SpanishES]: "¡Desbanear un tío de la base de datos (Solo staff, joder)!",
-  })
-  .addUserOption((option) =>
-    option
-      .setName("user")
-      .setDescription("The user to unban from the database.")
-      .setRequired(true),
+/** Adds the `unban` subcommand to the `user` group. */
+export function build(group: SlashCommandSubcommandGroupBuilder): SlashCommandSubcommandGroupBuilder {
+  return group.addSubcommand((sub) =>
+    sub
+      .setName(NAME)
+      .setDescription("Unban a user from the database.")
+      .setDescriptionLocalizations({
+        [Locale.SpanishLATAM]: "Desbanear un usuario de la base de datos.",
+        [Locale.SpanishES]: "Desbanear a un tío de la base de datos, joder.",
+      })
+      .addUserOption((opt) =>
+        opt.setName("user").setDescription("The user to unban from the database.").setRequired(true),
+      ),
   );
+}
 
-async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  await interaction.deferReply();
-
+/** Runs `/staff user unban`. The staff gate has already passed in the router. */
+export async function run(interaction: ChatInputCommandInteraction): Promise<void> {
   const phrases = localize(interaction.locale);
-
-  if (!(await isStaff(interaction.user.id, interaction.user.username))) {
-    await interaction.editReply({ content: phrases["error.no_permission"] });
-    return;
-  }
 
   const errorImage = new AttachmentBuilder(ERROR_IMAGE_FILE, { name: ERROR_IMAGE_NAME });
   const targetUser = interaction.options.getUser("user", true);
 
-  const userRequestData = {
-    discord_id: interaction.user.id,
-    discord_name: interaction.user.username,
-  };
+  const userRequestData = staffRequestData(interaction.user.id, interaction.user.username);
 
   let profileData;
   try {
@@ -178,7 +157,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    printMessage("Unban error:", String(error));
+    printMessage("staff user unban error:", String(error));
     await interaction.editReply({
       embeds: [
         buildErrorEmbed(
@@ -191,5 +170,3 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
     });
   }
 }
-
-export const command: Command = { data, execute };

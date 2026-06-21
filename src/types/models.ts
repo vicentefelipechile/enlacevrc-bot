@@ -67,7 +67,7 @@ export interface Log {
 
 export interface DiscordServer {
   discord_server_id: string;
-  server_name: string;
+  discord_server_name: string;
   added_at: string;
   added_by: string;
 }

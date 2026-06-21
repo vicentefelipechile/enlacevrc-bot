@@ -64,6 +64,17 @@ interface DataEnvelope<T> {
   error?: string;
 }
 
+/** Error thrown by D1 requests, preserving the HTTP status so callers can branch on it (e.g. 409). */
+export class D1RequestError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "D1RequestError";
+    this.status = status;
+  }
+}
+
 // =========================================================================================================
 // Main
 // =========================================================================================================
@@ -121,13 +132,26 @@ export class D1Class {
     };
 
     const response = await fetch(url, { ...options, headers });
-    const data = (await response.json()) as T & { error?: string };
 
-    if (!response.ok) {
-      throw new Error(data.error ?? `HTTP ${response.status}: ${response.statusText}`);
+    // The worker normally answers JSON, but a 500 may return a plain-text body (e.g. a Cloudflare
+    // error page). Read as text first so a non-JSON error body doesn't mask the real failure.
+    const rawBody = await response.text();
+    let data: (T & { error?: string }) | null = null;
+    try {
+      data = rawBody ? (JSON.parse(rawBody) as T & { error?: string }) : null;
+    } catch {
+      data = null;
     }
 
-    return data;
+    if (!response.ok) {
+      const detail = data?.error ?? rawBody.trim();
+      throw new D1RequestError(
+        response.status,
+        detail ? `HTTP ${response.status}: ${detail}` : `HTTP ${response.status}: ${response.statusText}`,
+      );
+    }
+
+    return data as T;
   }
 
   /**

@@ -1,9 +1,10 @@
 // =========================================================================================================
 // Deploy Commands
 // =========================================================================================================
-// Registers the bot's slash commands with Discord. Commands are pushed globally and, additionally, to
-// every guild the bot is registered in (guild commands update instantly, which is convenient while
-// iterating). Run via `npm run deploy-commands`.
+// Registers the bot's slash commands with Discord. By default commands are pushed only to every guild
+// the bot is registered in (guild commands update instantly, which is convenient while iterating).
+// Pass the `--global` flag to additionally register the commands globally. Run via
+// `npm run deploy-commands` (guild-only) or `npm run deploy-commands -- --global`.
 
 // =========================================================================================================
 // Imports
@@ -23,6 +24,9 @@ import type { UserRequestData } from "../src/types/models.js";
 // =========================================================================================================
 
 async function deployCommands(): Promise<void> {
+  // Global registration is opt-in: it only runs when the `--global` flag is passed.
+  const deployGlobal = process.argv.slice(2).includes("--global");
+
   D1Class.init({ apiKey: env.D1_PRIVATE_KEY });
 
   const commandsToDeploy: RESTPostAPIApplicationCommandsJSONBody[] = allCommands.map((command) =>
@@ -33,9 +37,14 @@ async function deployCommands(): Promise<void> {
 
   printMessage(`Registering ${commandsToDeploy.length} command(s)...`);
 
-  const globalData = (await rest.put(Routes.applicationCommands(env.DISCORD_CLIENT_ID), {
-    body: commandsToDeploy,
-  })) as unknown[];
+  if (deployGlobal) {
+    const globalData = (await rest.put(Routes.applicationCommands(env.DISCORD_CLIENT_ID), {
+      body: commandsToDeploy,
+    })) as unknown[];
+    printMessage(`Globally registered ${globalData.length} command(s) successfully.`);
+  } else {
+    printMessage("Skipping global registration (pass --global to enable).");
+  }
 
   const userRequestData: UserRequestData = {
     discord_id: env.DISCORD_CLIENT_ID,
@@ -50,14 +59,16 @@ async function deployCommands(): Promise<void> {
         Routes.applicationGuildCommands(env.DISCORD_CLIENT_ID, server.discord_server_id),
         { body: commandsToDeploy },
       );
-      printMessage(`Registered commands in server: ${server.server_name}`);
+      printMessage(`Registered commands in server: ${server.discord_server_name}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      printMessage(`[ERROR] Could not register commands in ${server.server_name}: ${message}`);
+      printMessage(
+        `[ERROR] Could not register commands in ${server.discord_server_name}: ${message}`,
+      );
     }
   }
 
-  printMessage(`Globally registered ${globalData.length} command(s) successfully.`);
+  printMessage("Done.");
 }
 
 deployCommands()

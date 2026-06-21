@@ -41,8 +41,9 @@ import { env } from "../config/env.js";
 import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { printMessage } from "../lib/logger.js";
-import { D1Class } from "../services/d1.js";
+import { D1Class, D1RequestError } from "../services/d1.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
+import type { BotClient } from "../types/client.js";
 
 
 // =========================================================================================================
@@ -50,6 +51,7 @@ import { VRCHAT_CLIENT } from "../services/vrchat.js";
 // =========================================================================================================
 
 const STATE_TTL_SECONDS = 5 * 60;
+const HTTP_CONFLICT = 409;
 const PREFIX = "linkgroup";
 const BUTTON = { INVITED: "invited", ACCEPT: "acceptterms", REJECT: "rejectterms" } as const;
 const customId = (component: string): string => `${PREFIX}_${component}`;
@@ -400,6 +402,31 @@ async function onInvited(interaction: ButtonInteraction, phrases: Phrases): Prom
   }
 }
 
+/**
+ * Joins the bot to a VRChat group, tolerating VRChat's frequent 500s on this endpoint: the join often
+ * succeeds server-side even when the API responds with an error. On failure we re-check membership via
+ * getGroup and treat the join as done when the bot is already a member, so the link still gets recorded.
+ */
+async function ensureJoinedGroup(groupId: string): Promise<void> {
+  // The SDK does not throw by default; it returns { data, error, response }. VRChat frequently answers
+  // joinGroup with a 500 even though the join succeeds, so we don't trust the immediate result: we
+  // re-check membership via getGroup and only fail when the bot really isn't a member.
+  const joinResult = await VRCHAT_CLIENT.joinGroup({ path: { groupId } });
+  if (!joinResult.error) {
+    return;
+  }
+
+  printMessage("[linkgroup] joinGroup returned an error, re-checking membership", String(joinResult.error));
+
+  const groupResponse = await VRCHAT_CLIENT.getGroup({ path: { groupId } });
+  const membership = (groupResponse.data as unknown as { myMember?: unknown } | undefined)?.myMember;
+  if (!membership) {
+    throw new Error(`Failed to join group ${groupId}: ${JSON.stringify(joinResult.error)}`);
+  }
+
+  printMessage(`[linkgroup] bot is already a member of ${groupId}; continuing`);
+}
+
 async function onAcceptTerms(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
   await interaction.deferUpdate();
 
@@ -425,14 +452,38 @@ async function onAcceptTerms(interaction: ButtonInteraction, phrases: Phrases): 
   }
 
   try {
-    await VRCHAT_CLIENT.joinGroup({ path: { groupId: state.groupId } });
-    const response = await D1Class.addVRChatGroup(
-      userRequestData,
-      state.groupId,
-      state.serverId,
-      state.groupName,
-    );
+    await ensureJoinedGroup(state.groupId);
+
+    // Register the link. A 409 means it is already registered (e.g. the bot was kicked and is now
+    // re-joining a still-linked group): the join above already restored membership, so we treat this
+    // as success and skip the per-action log id, which only exists for a fresh registration.
+    let logId: number | null = null;
+    try {
+      const response = await D1Class.addVRChatGroup(
+        userRequestData,
+        state.groupId,
+        state.serverId,
+        state.groupName,
+      );
+      logId = response.data.log_id;
+    } catch (error) {
+      if (!(error instanceof D1RequestError) || error.status !== HTTP_CONFLICT) {
+        throw error;
+      }
+      printMessage(`[linkgroup] group ${state.groupId} already registered; re-joined without re-registering`);
+    }
+
     linkGroupState.del(userId);
+
+    // Refresh the in-memory group cache the `/group` autocomplete reads from, so the freshly linked
+    // group is selectable immediately instead of only after the next restart.
+    try {
+      const client = interaction.client as BotClient;
+      const groups = await D1Class.listVRChatGroups(userRequestData, state.serverId, false);
+      client.vrchatGroups.set(state.serverId, groups);
+    } catch (error) {
+      printMessage("[linkgroup] failed to refresh group cache:", String(error));
+    }
 
     const container = new ContainerBuilder().setAccentColor(Colors.Green).addSectionComponents(
       new SectionBuilder()
@@ -461,7 +512,7 @@ async function onAcceptTerms(interaction: ButtonInteraction, phrases: Phrases): 
       .setTitle(phrases["log.action.title"].replace("{groupName}", state.groupName))
       .setDescription(
         phrases["log.action.actionid"]
-          .replace("{action_id}", String(response.data.log_id))
+          .replace("{action_id}", logId !== null ? String(logId) : "—")
           .replace("{vrchat_group_id}", state.groupId),
       )
       .setColor(Colors.Blurple)

@@ -22,6 +22,8 @@ import type { UserRequestData } from "../../src/types/models.js";
 const DISCORD_ID_PATTERN = /^\d+$/;
 const VRCHAT_ID_PATTERN =
   /^usr_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+const VRCHAT_GROUP_ID_PATTERN =
+  /^grp_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 
 const AFFIRMATIVE_ANSWERS = new Set(["s", "y", "si", "sí", "yes"]);
 
@@ -40,6 +42,11 @@ export function isValidDiscordId(input: string): boolean {
 /** True if the input matches the VRChat user-id format (usr_<uuid>). */
 export function isValidVRChatId(input: string): boolean {
   return VRCHAT_ID_PATTERN.test(input);
+}
+
+/** True if the input matches the VRChat group-id format (grp_<uuid>). */
+export function isValidVRChatGroupId(input: string): boolean {
+  return VRCHAT_GROUP_ID_PATTERN.test(input);
 }
 
 /**

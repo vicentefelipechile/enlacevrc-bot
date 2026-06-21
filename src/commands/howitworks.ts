@@ -38,7 +38,8 @@ const FIRST_PAGE = 1;
 
 // Custom id prefix so the interaction router dispatches button presses to this command.
 const BUTTON_PREFIX = "howitworks";
-// A page-navigation custom id is `howitworks_page_<n>`.
+// A page-navigation custom id is `howitworks_page_<role>_<n>`. The role keeps each button's id unique
+// even when two buttons target the same page (e.g. "first" and "prev" both pointing at page 1).
 const PAGE_BUTTON = `${BUTTON_PREFIX}_page`;
 // Disabled placeholder buttons need unique non-routing ids.
 const NOOP_PREFIX = `${BUTTON_PREFIX}_noop`;
@@ -153,13 +154,13 @@ function buildNavigation(currentPage: number, phrases: Phrases): ActionRowBuilde
   const atEnd = currentPage === TOTAL_PAGES;
 
   const firstButton = new ButtonBuilder()
-    .setCustomId(`${PAGE_BUTTON}_${FIRST_PAGE}`)
+    .setCustomId(`${PAGE_BUTTON}_first_${FIRST_PAGE}`)
     .setLabel(phrases["button.start"])
     .setStyle(ButtonStyle.Primary)
     .setDisabled(atStart);
 
   const prevButton = new ButtonBuilder()
-    .setCustomId(atStart ? `${NOOP_PREFIX}_prev` : `${PAGE_BUTTON}_${currentPage - 1}`)
+    .setCustomId(atStart ? `${NOOP_PREFIX}_prev` : `${PAGE_BUTTON}_prev_${currentPage - 1}`)
     .setLabel(phrases["button.prev"])
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(atStart);
@@ -171,13 +172,13 @@ function buildNavigation(currentPage: number, phrases: Phrases): ActionRowBuilde
     .setDisabled(true);
 
   const nextButton = new ButtonBuilder()
-    .setCustomId(atEnd ? `${NOOP_PREFIX}_next` : `${PAGE_BUTTON}_${currentPage + 1}`)
+    .setCustomId(atEnd ? `${NOOP_PREFIX}_next` : `${PAGE_BUTTON}_next_${currentPage + 1}`)
     .setLabel(phrases["button.next"])
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(atEnd);
 
   const lastButton = new ButtonBuilder()
-    .setCustomId(`${PAGE_BUTTON}_${TOTAL_PAGES}`)
+    .setCustomId(`${PAGE_BUTTON}_last_${TOTAL_PAGES}`)
     .setLabel(phrases["button.end"])
     .setStyle(ButtonStyle.Primary)
     .setDisabled(atEnd);
@@ -249,7 +250,8 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     return;
   }
 
-  const pageStr = interaction.customId.slice(`${PAGE_BUTTON}_`.length);
+  // Custom id is `howitworks_page_<role>_<n>`; the target page is the last segment.
+  const pageStr = interaction.customId.split("_").pop() ?? "";
   const page = Number.parseInt(pageStr, 10);
   if (Number.isNaN(page)) {
     return;

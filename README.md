@@ -18,7 +18,7 @@ npm run start
 ```
 
 ### CLI Management Scripts
-The project includes several CLI scripts for managing users and staff directly:
+The project includes CLI scripts for managing users directly:
 
 ```bash
 # Login to VRChat
@@ -29,14 +29,14 @@ npm run adduser
 npm run getuser
 npm run deluser
 
-# Staff Management
-npm run liststaff
-npm run addstaff
-npm run removestaff
+# Group Management
+npm run delgroup
 
 # Deploy Slash Commands
 npm run deploy-commands
 ```
+
+Staff roster management is done from Discord with `/staff member add|remove|list`.
 
 ---
 
@@ -88,12 +88,12 @@ Create a `.env` file with the following variables:
 
 The bot includes the following slash commands:
 
-- `/profile`: Manage user profiles.
+- `/profile`: View your own VRChat profile.
+- `/viewprofile`: View another user's profile.
 - `/settings`: Configure bot settings.
 - `/sync`: Synchronize Discord and VRChat data.
 - `/verification`: Handle user verification processes.
-- `/verifyuser`: Verify a specific user.
-- `/viewprofile`: View a user's profile.
+- `/staff`: Staff-only management — `/staff user add|ban|banid|unban|verify` and `/staff member add|remove|list`.
 
 ---
 

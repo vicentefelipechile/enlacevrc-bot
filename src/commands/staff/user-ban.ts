@@ -1,33 +1,32 @@
 // =========================================================================================================
-// Ban Command
+// /staff user ban  and  /staff user banid
 // =========================================================================================================
-// Staff-only command to ban a user from the EnlaceVRC database (not from Discord). A banned user cannot
-// unlink their VRChat account or verify on other servers. Targets are given either by Discord user or by
-// raw ID via two subcommands.
+// Bans a user from the EnlaceVRC database (not from Discord). A banned user cannot unlink their VRChat
+// account or verify on other servers. The target is given either by Discord user (`ban`) or by raw
+// profile ID (`banid`).
 
 // =========================================================================================================
 // Imports
 // =========================================================================================================
 
-import {
-  AttachmentBuilder,
-  Colors,
-  EmbedBuilder,
-  Locale,
-  SlashCommandBuilder,
+import { AttachmentBuilder, Colors, EmbedBuilder, Locale } from "discord.js";
+import type {
+  ChatInputCommandInteraction,
+  SlashCommandSubcommandGroupBuilder,
 } from "discord.js";
-import type { ChatInputCommandInteraction } from "discord.js";
 
-import type { Command } from "./types.js";
-import { createLocalizer } from "../lib/i18n.js";
-import { printMessage } from "../lib/logger.js";
-import { D1Class } from "../services/d1.js";
+import { createLocalizer } from "../../lib/i18n.js";
+import { printMessage } from "../../lib/logger.js";
+import { D1Class } from "../../services/d1.js";
+import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
 // Constants
 // =========================================================================================================
 
-const SUBCOMMAND = { USER: "user", ID: "id" } as const;
+export const NAME_BY_USER = "ban";
+export const NAME_BY_ID = "banid";
+
 const ARGS = { USER: "user", ID: "id", REASON: "reason" } as const;
 
 const ERROR_IMAGE_FILE = "img/error.jpg";
@@ -36,7 +35,6 @@ const ERROR_IMAGE_URL = `attachment://${ERROR_IMAGE_NAME}`;
 
 const localize = createLocalizer({
   [Locale.EnglishUS]: {
-    "error.no_permission": "You do not have permission to use this command.",
     "error.user_not_found_title": "❌ User Not Found",
     "error.user_not_found": "User profile not found in the database.",
     "error.already_banned_title": "❌ Already Banned",
@@ -50,7 +48,6 @@ const localize = createLocalizer({
     "success.footer": "Banned by {moderator}",
   },
   [Locale.SpanishLATAM]: {
-    "error.no_permission": "No tienes permisos para utilizar este comando.",
     "error.user_not_found_title": "❌ Usuario No Encontrado",
     "error.user_not_found": "Perfil de usuario no encontrado en la base de datos.",
     "error.already_banned_title": "❌ Ya Baneado",
@@ -64,7 +61,6 @@ const localize = createLocalizer({
     "success.footer": "Baneado por {moderator}",
   },
   [Locale.SpanishES]: {
-    "error.no_permission": "¡Joder tío, no tienes permisos pa usar este comando, chaval!",
     "error.user_not_found_title": "❌ ¡Que Desaparece el Usuario, Joder!",
     "error.user_not_found":
       "¡Ay, madre mía! ¡Ostras! No encontramos el perfil del tío en la base de datos, macho.",
@@ -98,16 +94,6 @@ interface BanTarget {
 // Helpers
 // =========================================================================================================
 
-/** True when the invoking user is registered staff. */
-async function isStaff(userId: string, username: string): Promise<boolean> {
-  try {
-    const staff = await D1Class.getStaff({ discord_id: userId, discord_name: username }, userId);
-    return staff !== null;
-  } catch {
-    return false;
-  }
-}
-
 function buildErrorEmbed(title: string, description: string, color: number): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle(title)
@@ -119,7 +105,7 @@ function buildErrorEmbed(title: string, description: string, color: number): Emb
 
 /** Resolves the ban target from whichever subcommand was used. */
 function resolveTarget(interaction: ChatInputCommandInteraction): BanTarget {
-  if (interaction.options.getSubcommand() === SUBCOMMAND.USER) {
+  if (interaction.options.getSubcommand() === NAME_BY_USER) {
     const user = interaction.options.getUser(ARGS.USER, true);
     return { id: user.id, displayName: user.displayName, avatarUrl: user.displayAvatarURL() };
   }
@@ -132,54 +118,50 @@ function resolveTarget(interaction: ChatInputCommandInteraction): BanTarget {
 // Main
 // =========================================================================================================
 
-const data = new SlashCommandBuilder()
-  .setName("ban")
-  .setDescription("Ban a user from the database (Staff only).")
-  .setDescriptionLocalizations({
-    [Locale.SpanishLATAM]: "Banear un usuario de la base de datos (Solo staff).",
-    [Locale.SpanishES]: "¡Banear un tío de la base de datos (Solo staff, joder)!",
-  })
-  .addSubcommand((sub) =>
-    sub
-      .setName(SUBCOMMAND.USER)
-      .setDescription("Ban a user from the database.")
-      .addUserOption((opt) =>
-        opt.setName(ARGS.USER).setDescription("The user to ban from the database.").setRequired(true),
-      )
-      .addStringOption((opt) =>
-        opt.setName(ARGS.REASON).setDescription("The reason for the ban.").setRequired(true),
-      ),
-  )
-  .addSubcommand((sub) =>
-    sub
-      .setName(SUBCOMMAND.ID)
-      .setDescription("Ban a user from the database by ID.")
-      .addStringOption((opt) =>
-        opt.setName(ARGS.ID).setDescription("The user ID to ban from the database.").setRequired(true),
-      )
-      .addStringOption((opt) =>
-        opt.setName(ARGS.REASON).setDescription("The reason for the ban.").setRequired(true),
-      ),
-  );
+/** Adds the `ban` and `banid` subcommands to the `user` group. */
+export function build(group: SlashCommandSubcommandGroupBuilder): SlashCommandSubcommandGroupBuilder {
+  return group
+    .addSubcommand((sub) =>
+      sub
+        .setName(NAME_BY_USER)
+        .setDescription("Ban a user from the database.")
+        .setDescriptionLocalizations({
+          [Locale.SpanishLATAM]: "Banear un usuario de la base de datos.",
+          [Locale.SpanishES]: "Banear a un tío de la base de datos, joder.",
+        })
+        .addUserOption((opt) =>
+          opt.setName(ARGS.USER).setDescription("The user to ban from the database.").setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt.setName(ARGS.REASON).setDescription("The reason for the ban.").setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName(NAME_BY_ID)
+        .setDescription("Ban a user from the database by ID.")
+        .setDescriptionLocalizations({
+          [Locale.SpanishLATAM]: "Banear un usuario de la base de datos por ID.",
+          [Locale.SpanishES]: "Banear a un tío de la base de datos por su ID, chaval.",
+        })
+        .addStringOption((opt) =>
+          opt.setName(ARGS.ID).setDescription("The user ID to ban from the database.").setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt.setName(ARGS.REASON).setDescription("The reason for the ban.").setRequired(true),
+        ),
+    );
+}
 
-async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  await interaction.deferReply();
-
+/** Runs `/staff user ban` or `/staff user banid`. The staff gate has already passed in the router. */
+export async function run(interaction: ChatInputCommandInteraction): Promise<void> {
   const phrases: Phrases = localize(interaction.locale);
-
-  if (!(await isStaff(interaction.user.id, interaction.user.username))) {
-    await interaction.editReply({ content: phrases["error.no_permission"] });
-    return;
-  }
 
   const errorImage = new AttachmentBuilder(ERROR_IMAGE_FILE, { name: ERROR_IMAGE_NAME });
   const target = resolveTarget(interaction);
   const banReason = interaction.options.getString(ARGS.REASON, true);
 
-  const userRequestData = {
-    discord_id: interaction.user.id,
-    discord_name: interaction.user.username,
-  };
+  const userRequestData = staffRequestData(interaction.user.id, interaction.user.username);
 
   let profileData;
   try {
@@ -232,7 +214,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    printMessage("Ban error:", String(error));
+    printMessage("staff user ban error:", String(error));
     await interaction.editReply({
       embeds: [
         buildErrorEmbed(phrases["error.ban_failed_title"], phrases["error.ban_failed"], Colors.Red),
@@ -241,5 +223,3 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
     });
   }
 }
-
-export const command: Command = { data, execute };

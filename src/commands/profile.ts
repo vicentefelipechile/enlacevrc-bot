@@ -12,9 +12,11 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ContainerBuilder,
   Locale,
   MessageFlags,
   SlashCommandBuilder,
+  TextDisplayBuilder,
 } from "discord.js";
 import type { ChatInputCommandInteraction } from "discord.js";
 
@@ -110,15 +112,27 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   try {
     profileData = await D1Class.getProfile(userRequestData, interaction.user.id);
   } catch {
-    // Not verified: offer a button that routes to the verification command's flow.
+    // Not verified: offer a button that routes to the verification command's flow. Built as a
+    // Components V2 container so the button's onProfile handler (which edits this message into a
+    // V2 video container) stays within V2 — the IS_COMPONENTS_V2 flag is immutable once set.
     const verifyButton = new ButtonBuilder()
       .setLabel(phrases["button.verify"])
       .setStyle(ButtonStyle.Primary)
       .setCustomId(VERIFICATION_BUTTON_ID);
 
+    const container = new ContainerBuilder()
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          phrases["error.not_verified"].replace("{command}", "verification"),
+        ),
+      )
+      .addActionRowComponents(
+        new ActionRowBuilder<ButtonBuilder>().addComponents(verifyButton),
+      );
+
     await interaction.editReply({
-      content: phrases["error.not_verified"].replace("{command}", "verification"),
-      components: [new ActionRowBuilder<ButtonBuilder>().addComponents(verifyButton)],
+      components: [container],
+      flags: MessageFlags.IsComponentsV2,
     });
     return;
   }

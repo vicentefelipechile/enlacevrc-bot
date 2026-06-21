@@ -216,20 +216,40 @@ The bot extends the discord.js `Client` with two collections via the `BotClient`
 | `/howitworks` | — | 7-page paginated guide; `handleButton` (prefix `howitworks`). |
 | `/howtoverify` | — | Shows the verification tutorial video. |
 | `/verification` | `vrchat` (URL, optional) | Verify/unverify flow; `handleButton` (prefix `verification`). |
-| `/verifyuser` | `user` | Staff-only 18+ verification of another user. |
 | `/profile` | — | Show the invoking user's VRChat profile. |
 | `/viewprofile` | `user` | Show another user's profile. |
 | `/sync` | — | Re-apply roles/nickname from the user's VRChat profile. |
-| `/adduser` | `user`, `vrchat_id` | Link a Discord user to a VRChat id. |
-| `/ban` | `user`, `id` | Ban a profile (by user or by id), with a reason. |
-| `/unban` | `user` | Unban a profile. |
 | `/worldinfo` | `world` | Look up a VRChat world by id/URL. |
 | `/search` | `world`, `avatar`, `user` | Paginated VRChat search; uses a local component collector. |
 | `/settings` | `verification-role`, `verification-plus-role`, `auto-nickname`, `log-channel`, `view`, `reset` | Per-server configuration. |
 | `/group` | `invite`, `kick`, `viewpermissions` | VRChat group management; `group` option uses autocomplete from `client.vrchatGroups`. |
 | `/linkgroup` | — | Multi-step state-machine flow to link a VRChat group; `handleButton` (prefix `linkgroup`). |
+| `/staff` | `user add\|ban\|banid\|unban\|verify`, `member add\|remove\|list` | Staff-only management (see below). |
 
 (Names above reflect the slash command names; consult each file for the exact option spelling.)
+
+### The `/staff` command
+
+Every staff-only action lives under `/staff`, grouped by area, in `src/commands/staff/`:
+
+| Route | Action |
+|---|---|
+| `/staff user add` | Link a Discord user to a VRChat id. |
+| `/staff user ban` | Ban a profile by Discord user, with a reason. |
+| `/staff user banid` | Ban a profile by raw profile id, with a reason. |
+| `/staff user unban` | Unban a profile. |
+| `/staff user verify` | 18+ verification of another user. |
+| `/staff member add` | Register a new staff member in the database. |
+| `/staff member remove` | Remove a staff member. |
+| `/staff member list` | List all registered staff. |
+
+`src/commands/staff/index.ts` assembles the builder from the per-subcommand modules and routes by
+`group:subcommand`. Access is gated **once** in the router (`isStaff` in `staff/permissions.ts`): a
+user passes when registered as staff in D1, or when they are the `DISCORD_STAFF_ID` bootstrap identity
+— that bootstrap lets the root admin register the first real staff member from Discord. Each
+subcommand module exports `build(group)` (adds its subcommand) and `run(interaction)` (assumes the
+gate already passed). To add a subcommand, create a module, register it in `staff/index.ts`'s builder
+and `ROUTES` map.
 
 ---
 
@@ -273,10 +293,27 @@ Practical consequences you will hit:
 - **Components V2** (`ContainerBuilder`, `SectionBuilder`, `TextDisplayBuilder`, `ThumbnailBuilder`,
   `MediaGalleryBuilder`, `SeparatorBuilder`) require `flags: MessageFlags.IsComponentsV2` alongside
   the `components` array on the reply.
+  - The `IS_COMPONENTS_V2` flag is **immutable per message**: once a message is sent without it you
+    **cannot** `editReply` it into a V2 message (and vice versa). A button handler that edits a
+    message into a V2 container only works if the original message was **already** sent as V2. So if
+    a command's reply has a button whose handler renders a V2 container (e.g. `/profile`'s "Verify"
+    button → the verification video), build that **original** reply as V2 too — even the simple
+    text+button case — using a `TextDisplayBuilder` instead of the legacy `content` field.
+  - The legacy `content` field **cannot coexist** with the V2 flag on the same message; Discord
+    rejects it with `50035 MESSAGE_CANNOT_USE_LEGACY_FIELDS_WITH_COMPONENTS_V2`. Put text in a
+    `TextDisplayBuilder`, not `content`.
 - **Defer early.** Use `interaction.deferReply()` at the start of `execute` and respond with
   `editReply()`. Ephemerality is decided at defer time, not on `editReply`.
 - **Permission gating** uses native `setDefaultMemberPermissions()` on the builder and/or explicit
   checks inside `execute` — not an interception layer.
+- **Managing roles requires a pre-flight check.** Before any `member.roles.add/remove`, verify the
+  bot has `ManageRoles` (`botMember.permissions.has(PermissionsBitField.Flags.ManageRoles)`) **and**
+  that the bot's top role sits above the target role
+  (`botMember.roles.highest.position > role.position`). Otherwise Discord throws `50013 Missing
+  Permissions` at the API call, which surfaces as a generic "unexpected error". Check up front and
+  return a localized, actionable message ("move my role above {role}"). See `grantRole` in
+  `sync.ts` and the guard in `staff/user-verify.ts` for the canonical pattern. Get the bot member
+  with `await guild.members.fetchMe()`.
 - **Cooldowns:** call `checkCooldown(commandName, userId, seconds)` from `src/lib/cooldown.ts`
   yourself when a command needs rate-limiting, and act on the returned `CooldownState`. Nothing
   intercepts interactions on your behalf.
@@ -313,17 +350,19 @@ npm run typecheck        # tsc --noEmit
 npm run lint             # eslint .
 npm run format           # prettier --write .
 
-npm run deploy-commands  # Register slash commands (global + per registered server)
+npm run deploy-commands         # Register slash commands per registered server (fast propagation)
+npm run deploy-commands:global  # Register commands globally (--global; slower propagation)
+npm run clear-global-commands   # Remove all globally-registered commands
 
 # Admin CLI (share scripts/lib/admin.ts; act under DISCORD_STAFF_ID)
 npm run login            # Interactive VRChat sign-in (persists the session cookie)
 npm run adduser <discord_id> <vrchat_id>
 npm run getuser <discord_id | vrchat_id>
 npm run deluser <discord_id | vrchat_id>     # asks for confirmation
-npm run liststaff
-npm run addstaff <discord_id> <discord_name>
-npm run removestaff <discord_id>
+npm run delgroup <grp_id>                    # unlink a VRChat group; asks for confirmation
 ```
+
+Staff roster management lives in `/staff member ...` inside Discord, not in CLI scripts.
 
 Run `npm run login` once before first start so the VRChat session cookie exists.
 

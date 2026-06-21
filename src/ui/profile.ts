@@ -155,12 +155,18 @@ export function formatProfileEmbed(
 
   const container = new ContainerBuilder()
     .setAccentColor(getRandomColor())
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(textContent))
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems({
-        media: { url: vrchatUser.profilePicOverride ?? vrchatUser.currentAvatarImageUrl ?? "" },
-      }),
-    )
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(textContent));
+
+  // VRChat may return empty strings for these fields; only add the gallery with a real image URL,
+  // since discord.js rejects an empty media URL.
+  const avatarUrl = vrchatUser.profilePicOverride || vrchatUser.currentAvatarImageUrl || "";
+  if (avatarUrl) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems({ media: { url: avatarUrl } }),
+    );
+  }
+
+  container
     .addSeparatorComponents(
       new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
     )
