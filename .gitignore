@@ -1,5 +1,14 @@
-# VRChat
+.claude/
+
+# VRChat (session cookies + cached group dumps — regenerated at runtime)
 data.json
+grp_*.json
+
+# Build output
+dist/
+
+# Internal notes (never committed)
+plan-migration.md
 
 # Logs
 logs

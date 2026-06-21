@@ -1,23 +1,39 @@
 {
+  "name": "enlacevrc-bot",
+  "version": "1.0.0",
+  "description": "Discord bot that links Discord accounts to VRChat profiles and manages VRChat group membership.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/src/index.js",
+    "deploy-commands": "tsx scripts/deploy-commands.ts",
+    "login": "tsx scripts/login.ts",
+    "adduser": "tsx scripts/adduser.ts",
+    "getuser": "tsx scripts/getuser.ts",
+    "deluser": "tsx scripts/deluser.ts",
+    "liststaff": "tsx scripts/liststaff.ts",
+    "addstaff": "tsx scripts/addstaff.ts",
+    "removestaff": "tsx scripts/removestaff.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
-    "discord.js": "^14.22.1",
+    "discord.js": "^14.26.4",
     "dotenv": "^17.2.2",
-    "js-discord-modularcommand": "^3.3.2",
     "keyv": "^5.5.2",
     "keyv-file": "^5.2.0",
     "node-cache": "^5.1.2",
     "vrchat": "^2.20.3"
   },
-  "scripts": {
-    "start": "node bot.js",
-    "login": "node cmds/login.js",
-    "adduser": "node cmds/adduser.js",
-    "getuser": "node cmds/getuser.js",
-    "deluser": "node cmds/deluser.js",
-    "liststaff": "node cmds/liststaff.js",
-    "deploy-commands": "node bot-cmds.js",
-    "addstaff": "node cmds/addstaff.js",
-    "removestaff": "node cmds/removestaff.js"
-  },
-  "type": "commonjs"
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-import": "^2.31.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.0.0"
+  }
 }

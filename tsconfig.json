@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    // Output target: Node 26 supports modern ES features natively.
+    "target": "ES2023",
+    "lib": ["ES2023"],
+
+    // ESM with NodeNext so the ".js" specifiers resolve like Node does at runtime.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    // Project layout: compile src/ and scripts/ into dist/.
+    "rootDir": ".",
+    "outDir": "dist",
+
+    // Strictness: catch as much as possible at compile time.
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Interop with the CommonJS dependencies (node-cache, keyv-file).
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+
+    // Emit settings.
+    "declaration": false,
+    "sourceMap": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
