@@ -27,6 +27,7 @@ import type { ButtonInteraction, ChatInputCommandInteraction, GuildMember } from
 import NodeCache from "node-cache";
 
 import type { Command } from "./types.js";
+import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { printMessage } from "../lib/logger.js";
 import { generateCodeByVRChat, getVRChatId } from "../lib/vrchat-code.js";
@@ -42,6 +43,10 @@ const VERIFY_VIDEO_FILE = "img/verify.webm";
 const VERIFY_VIDEO_NAME = "verify.webm";
 const CODE_CACHE_TTL_SECONDS = 5 * 60;
 const AUTO_NICKNAME_ENABLED = "1";
+
+// Verification method id recorded when the bot auto-verifies a user whose VRChat age is verified.
+// Shares the staff id since the outcome (+18 access) is identical.
+const BOT_VERIFICATION_ID = 1;
 
 // Button component ids (the part after the `verification_` prefix in the custom id).
 const BUTTON = {
@@ -81,6 +86,8 @@ const localize = createLocalizer({
       "# Verification\n\nTo verify your account, you need to provide the URL to your VRChat profile as a command argument.",
     "verify.gotovrchat": "Go to VRChat",
     success: "Congratulations! Your account has been successfully verified.",
+    "success.age_verified":
+      "\n\nYour VRChat age is verified, so you have also been granted **+18 verification** automatically. Verified by {bot}.",
     cancelled: "Verification cancelled.",
   },
   [Locale.SpanishLATAM]: {
@@ -106,6 +113,8 @@ const localize = createLocalizer({
       "# Verificación\n\nPara verificar tu cuenta tienes que proporcionar la URL a tu perfil de VRChat como argumento del comando.",
     "verify.gotovrchat": "Ir a VRChat",
     success: "¡Felicidades! Tu cuenta ha sido verificada exitosamente.",
+    "success.age_verified":
+      "\n\nTu edad en VRChat está verificada, así que también se te otorgó la **verificación +18** automáticamente. Verificado por {bot}.",
     cancelled: "Verificación cancelada.",
   },
   [Locale.SpanishES]: {
@@ -131,6 +140,8 @@ const localize = createLocalizer({
       "# Verificación\n\nPara verificarte, tienes que soltar la URL de tu perfil de VRChat en el comando, ¿vale?",
     "verify.gotovrchat": "Ir a VRChat",
     success: "¡Enhorabuena, crack! Tu cuenta está verificada. ¡A tope!",
+    "success.age_verified":
+      "\n\n¡Y ojo! Que tu edad en VRChat está verificada, así que te has llevao la **verificación +18** de regalo, sin comerlo ni beberlo. Verificado por {bot}, ¡olé!",
     cancelled: "Pues nada, verificación cancelada. Tú te lo pierdes.",
   },
 });
@@ -148,6 +159,7 @@ interface PendingVerification {
 interface VRChatUser {
   bio?: string;
   displayName: string;
+  ageVerified?: boolean;
 }
 
 // =========================================================================================================
@@ -238,26 +250,61 @@ async function onVerify(interaction: ButtonInteraction, phrases: Phrases): Promi
     vrchat_name: vrchatData.displayName,
   });
 
+  // When VRChat reports the user's age as verified, the bot itself grants definitive +18 verification:
+  // it records the profile as verified (with the bot as the responsible party) and reports it below.
+  let ageVerifiedGranted = false;
+
   if (interaction.guild && interaction.member) {
     const settings = await D1Class.getAllDiscordSettings(userRequestData, interaction.guild.id);
     const member = interaction.member as GuildMember;
 
-    if (settings["auto_nickname"] === AUTO_NICKNAME_ENABLED) {
+    if (settings[DISCORD_SERVER_SETTINGS.AUTO_NICKNAME] === AUTO_NICKNAME_ENABLED) {
       await member.setNickname(vrchatData.displayName).catch(() => undefined);
     }
 
-    const verificationRoleId = settings["verification_role"];
+    const verificationRoleId = settings[DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE];
     const verificationRole = verificationRoleId
       ? interaction.guild.roles.cache.get(verificationRoleId)
       : undefined;
     if (verificationRole) {
       await member.roles.add(verificationRole).catch(() => undefined);
     }
+
+    if (vrchatData.ageVerified) {
+      // The bot is the responsible party for this automatic verification.
+      const botRequestData = {
+        discord_id: interaction.client.user.id,
+        discord_name: interaction.client.user.username,
+      };
+
+      const verificationPlusRoleId = settings[DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE];
+      const verificationPlusRole = verificationPlusRoleId
+        ? interaction.guild.roles.cache.get(verificationPlusRoleId)
+        : undefined;
+      if (verificationPlusRole) {
+        await member.roles.add(verificationPlusRole).catch(() => undefined);
+      }
+
+      try {
+        await D1Class.verifyProfile(botRequestData, discordId, {
+          verification_id: BOT_VERIFICATION_ID,
+          verified_from: interaction.guild.id,
+        });
+        ageVerifiedGranted = true;
+      } catch (error) {
+        printMessage("Automatic age verification error:", String(error));
+      }
+    }
   }
+
+  const successMessage = ageVerifiedGranted
+    ? phrases.success +
+      phrases["success.age_verified"].replace("{bot}", interaction.client.user.username)
+    : phrases.success;
 
   const doneButton = verifyButton(phrases).setDisabled(true);
   await interaction.editReply({
-    content: phrases.success,
+    content: successMessage,
     embeds: [],
     components: [new ActionRowBuilder<ButtonBuilder>().addComponents(doneButton)],
   });
