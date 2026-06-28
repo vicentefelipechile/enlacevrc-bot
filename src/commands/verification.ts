@@ -16,12 +16,15 @@ import {
   ButtonStyle,
   Colors,
   ContainerBuilder,
-  EmbedBuilder,
   Locale,
   MediaGalleryBuilder,
   MessageFlags,
+  SectionBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
   SlashCommandBuilder,
   TextDisplayBuilder,
+  ThumbnailBuilder,
 } from "discord.js";
 import type { ButtonInteraction, ChatInputCommandInteraction, GuildMember } from "discord.js";
 import NodeCache from "node-cache";
@@ -33,6 +36,7 @@ import { printMessage } from "../lib/logger.js";
 import { generateCodeByVRChat, getVRChatId } from "../lib/vrchat-code.js";
 import { D1Class } from "../services/d1.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
+import { textContainer } from "../ui/container.js";
 
 // =========================================================================================================
 // Constants
@@ -44,6 +48,9 @@ const VERIFY_VIDEO_NAME = "verify.webm";
 const CODE_CACHE_TTL_SECONDS = 5 * 60;
 const AUTO_NICKNAME_ENABLED = "1";
 
+// How many username search candidates to walk the user through before giving up.
+const MAX_PROFILE_CANDIDATES = 3;
+
 // Verification method id recorded when the bot auto-verifies a user whose VRChat age is verified.
 // Shares the staff id since the outcome (+18 access) is identical.
 const BOT_VERIFICATION_ID = 1;
@@ -54,6 +61,9 @@ const BUTTON = {
   UNVERIFY: "unverify",
   CANCEL: "cancelaction",
   PROFILE: "profile",
+  // Username-candidate confirmation step: confirm this profile is mine / show the next candidate.
+  CONFIRM_PROFILE: "confirmprofile",
+  REJECT_PROFILE: "rejectprofile",
 } as const;
 
 const PREFIX = "verification";
@@ -61,6 +71,9 @@ const customId = (component: string): string => `${PREFIX}_${component}`;
 
 // Holds the pending VRChat id per user between issuing the code and pressing Verify.
 const pendingVerifications = new NodeCache({ stdTTL: CODE_CACHE_TTL_SECONDS });
+
+// Holds the username-search candidates a user is walking through (until they confirm or run out).
+const pendingCandidates = new NodeCache({ stdTTL: CODE_CACHE_TTL_SECONDS });
 
 const localize = createLocalizer({
   [Locale.EnglishUS]: {
@@ -71,10 +84,17 @@ const localize = createLocalizer({
     "error.code_not_found":
       "The verification code was not found in your VRChat bio. Please make sure you have added it correctly and press the button again.",
     "error.vrchat_not_found": "Could not find a user on VRChat with the ID `{id}`.",
+    "error.username_not_found": "Could not find a user on VRChat with the name `{name}`.",
+    "error.profile_not_confirmed":
+      "I couldn't find your profile. Double-check the characters of your profile or use your profile link.",
+    "candidate.question": "Is this your profile? **({current}/{total})**",
+    "candidate.profile": "### [{name}]({url})\nVRChat profile",
+    "candidate.confirm": "It's my profile",
+    "candidate.reject": "No, that's not me",
     "embed.title": "VRChat Account Verification",
     "embed.description":
       'To verify your account, please follow these steps:\n\n1. Copy the following code:\n```{code}```\n2. Paste the code anywhere in your VRChat bio.\n3. Press the "Verify" button below.',
-    "embed.footer": "This button will expire in 5 minutes.",
+    "embed.footer": "This verification code will expire in 5 minutes.",
     "verification.verify": "Verify",
     "verification.cancelaction": "Cancel",
     "unverify.description":
@@ -98,10 +118,18 @@ const localize = createLocalizer({
       "No se encontró el código de verificación en tu biografía de VRChat. Asegúrate de haberlo añadido correctamente y presiona el botón de nuevo.",
     "error.vrchat_not_found":
       "No se pudo encontrar un usuario en VRChat con el ID `{id}`. Por favor, revisa que esté bien escrito.",
+    "error.username_not_found":
+      "No se pudo encontrar un usuario en VRChat con el nombre `{name}`. Por favor, revisa que esté bien escrito.",
+    "error.profile_not_confirmed":
+      "No pude encontrar tu perfil, revisa bien los caracteres de tu perfil o utiliza el enlace de tu perfil.",
+    "candidate.question": "¿Este es tu perfil? **({current}/{total})**",
+    "candidate.profile": "### [{name}]({url})\nPerfil de VRChat",
+    "candidate.confirm": "Es mi perfil",
+    "candidate.reject": "No, no soy yo",
     "embed.title": "Verificación de Cuenta de VRChat",
     "embed.description":
       'Para verificar tu cuenta, por favor sigue estos pasos:\n\n1. Copia el siguiente código:\n```{code}```\n2. Pega el código en cualquier parte de tu biografía de VRChat.\n3. Presiona el botón "Verificar" que aparece a continuación.',
-    "embed.footer": "Este botón expirará en 5 minutos.",
+    "embed.footer": "Este código de verificación expirará en 5 minutos.",
     "verification.verify": "Verificar",
     "verification.cancelaction": "Cancelar",
     "unverify.description":
@@ -125,10 +153,18 @@ const localize = createLocalizer({
       "¿Pero dónde está el código? Que no lo veo en tu biografía, me cago en la leche. Asegúrate de que lo has pegado bien y dale al botón otra vez.",
     "error.vrchat_not_found":
       "Que no, que con el ID `{id}` no hay ni dios en VRChat. Revisa que lo has puesto bien.",
+    "error.username_not_found":
+      "Que no, que con el nombre `{name}` no hay ni dios en VRChat. Revisa que lo has puesto bien.",
+    "error.profile_not_confirmed":
+      "Pues nada, que no doy con tu perfil, chaval. Mira bien las letras de tu perfil o pega el enlace directamente, que es más fácil.",
+    "candidate.question": "¿Este es tu perfil, colega? **({current}/{total})**",
+    "candidate.profile": "### [{name}]({url})\nPerfil de VRChat",
+    "candidate.confirm": "¡Ese soy yo!",
+    "candidate.reject": "Qué va, no soy yo",
     "embed.title": "Verificación de la Cuenta de VRChat, ¡al turrón!",
     "embed.description":
       'Venga, para verificarte, haz esto que es pan comido:\n\n1. Pilla el código este:\n```{code}```\n2. Lo plantas en cualquier sitio de tu biografía de VRChat.\n3. Le das al botón de "Verificar" de aquí abajo y a correr.',
-    "embed.footer": "Ojo, que el botón este se autodestruye en 5 minutos.",
+    "embed.footer": "Ojo, que este código se autodestruye en 5 minutos.",
     "verification.verify": "¡Verificar!",
     "verification.cancelaction": "Cancelar, que me he liado",
     "unverify.description":
@@ -157,9 +193,25 @@ interface PendingVerification {
 }
 
 interface VRChatUser {
+  id: string;
   bio?: string;
   displayName: string;
   ageVerified?: boolean;
+  profilePicOverride?: string;
+  currentAvatarImageUrl?: string;
+}
+
+/** A username-search candidate the user is being asked to confirm. */
+interface ProfileCandidate {
+  id: string;
+  displayName: string;
+  avatarUrl?: string;
+}
+
+/** The candidate walk-through state cached per user between confirm/reject presses. */
+interface PendingCandidates {
+  candidates: ProfileCandidate[];
+  index: number;
 }
 
 // =========================================================================================================
@@ -217,9 +269,113 @@ function cancelButton(phrases: Phrases): ButtonBuilder {
     .setEmoji("⏹️");
 }
 
+/**
+ * Builds the Components V2 container asking the user whether the candidate at `state.index` is their
+ * profile, with "It's my profile" / "No, that's not me" buttons. Shown when verifying by username.
+ */
+function buildCandidateContainer(
+  state: PendingCandidates,
+  phrases: Phrases,
+): ContainerBuilder {
+  const candidate = state.candidates[state.index]!;
+  const profileUrl = `${VRCHAT_URL}/user/${candidate.id}`;
+  const question = phrases["candidate.question"]
+    .replace("{current}", String(state.index + 1))
+    .replace("{total}", String(state.candidates.length));
+  const profile = phrases["candidate.profile"]
+    .replace("{name}", candidate.displayName)
+    .replace("{url}", profileUrl);
+
+  const container = new ContainerBuilder()
+    .setAccentColor(Colors.Aqua)
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(question))
+    .addSeparatorComponents(
+      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
+    );
+
+  // Name/link beside a compact avatar thumbnail; falls back to a plain text block when there's no
+  // avatar (a Section requires an accessory, so only use one when an image is available).
+  if (candidate.avatarUrl) {
+    container.addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(profile))
+        .setThumbnailAccessory(new ThumbnailBuilder().setURL(candidate.avatarUrl)),
+    );
+  } else {
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(profile));
+  }
+
+  const confirm = new ButtonBuilder()
+    .setCustomId(customId(BUTTON.CONFIRM_PROFILE))
+    .setLabel(phrases["candidate.confirm"])
+    .setStyle(ButtonStyle.Success)
+    .setEmoji("✅");
+  const reject = new ButtonBuilder()
+    .setCustomId(customId(BUTTON.REJECT_PROFILE))
+    .setLabel(phrases["candidate.reject"])
+    .setStyle(ButtonStyle.Danger)
+    .setEmoji("❌");
+
+  container
+    .addSeparatorComponents(
+      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
+    )
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(confirm, reject),
+    );
+  return container;
+}
+
+/** Builds the Components V2 container that issues the bio code for a confirmed VRChat id. */
+function buildCodeContainer(vrchatId: string, phrases: Phrases): ContainerBuilder {
+  const verificationCode = generateCodeByVRChat(vrchatId);
+  return new ContainerBuilder()
+    .setAccentColor(Colors.Aqua)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        `## ${phrases["embed.title"]}\n\n` +
+          phrases["embed.description"].replace("{code}", verificationCode),
+      ),
+    )
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${phrases["embed.footer"]}`))
+    .addSeparatorComponents(
+      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
+    )
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setURL(VRCHAT_URL)
+          .setEmoji("🔗")
+          .setLabel(phrases["verify.gotovrchat"]),
+      ),
+    )
+    .addSeparatorComponents(
+      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
+    )
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        verifyButton(phrases),
+        cancelButton(phrases),
+      ),
+    );
+}
+
 // =========================================================================================================
 // Button Handlers
 // =========================================================================================================
+
+/** Edits the interaction reply to a single-text Components V2 message, clearing any prior components. */
+async function replyText(
+  interaction: ButtonInteraction,
+  content: string,
+  color: number = Colors.Aqua,
+): Promise<void> {
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [textContainer(content, color)],
+  });
+}
 
 async function onVerify(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
   await interaction.deferUpdate();
@@ -227,7 +383,7 @@ async function onVerify(interaction: ButtonInteraction, phrases: Phrases): Promi
   const discordId = interaction.user.id;
   const cached = pendingVerifications.get<PendingVerification>(discordId);
   if (!cached) {
-    await interaction.editReply({ content: phrases["error.timeout"], embeds: [], components: [] });
+    await replyText(interaction, phrases["error.timeout"]);
     return;
   }
 
@@ -303,10 +459,16 @@ async function onVerify(interaction: ButtonInteraction, phrases: Phrases): Promi
     : phrases.success;
 
   const doneButton = verifyButton(phrases).setDisabled(true);
+  const doneRow = new ActionRowBuilder<ButtonBuilder>().addComponents(doneButton);
+
   await interaction.editReply({
-    content: successMessage,
-    embeds: [],
-    components: [new ActionRowBuilder<ButtonBuilder>().addComponents(doneButton)],
+    flags: MessageFlags.IsComponentsV2,
+    components: [
+      new ContainerBuilder()
+        .setAccentColor(Colors.Green)
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(successMessage))
+        .addActionRowComponents(doneRow),
+    ],
   });
 }
 
@@ -321,16 +483,12 @@ async function onUnverify(interaction: ButtonInteraction, phrases: Phrases): Pro
   try {
     profileData = await D1Class.getProfile(userRequestData, interaction.user.id, true);
   } catch {
-    await interaction.editReply({ content: phrases["error.no_profile"], embeds: [], components: [] });
+    await replyText(interaction, phrases["error.no_profile"], Colors.Red);
     return;
   }
 
   if (profileData.is_banned) {
-    await interaction.editReply({
-      content: phrases["error.banned_unverify"],
-      embeds: [],
-      components: [],
-    });
+    await replyText(interaction, phrases["error.banned_unverify"], Colors.Red);
     return;
   }
 
@@ -338,23 +496,25 @@ async function onUnverify(interaction: ButtonInteraction, phrases: Phrases): Pro
     await D1Class.deleteProfile(userRequestData, interaction.user.id);
     const doneButton = unverifyButton(phrases).setDisabled(true);
     await interaction.editReply({
-      content: phrases["unverify.success"],
-      embeds: [],
-      components: [new ActionRowBuilder<ButtonBuilder>().addComponents(doneButton)],
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        new ContainerBuilder()
+          .setAccentColor(Colors.Green)
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(phrases["unverify.success"]))
+          .addActionRowComponents(
+            new ActionRowBuilder<ButtonBuilder>().addComponents(doneButton),
+          ),
+      ],
     });
   } catch (error) {
     printMessage("Unverification error:", String(error));
-    await interaction.editReply({
-      content: phrases["unverify.error"],
-      embeds: [],
-      components: [],
-    });
+    await replyText(interaction, phrases["unverify.error"], Colors.Red);
   }
 }
 
 async function onCancel(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
   await interaction.deferUpdate();
-  await interaction.editReply({ content: phrases.cancelled, embeds: [], components: [] });
+  await replyText(interaction, phrases.cancelled);
 }
 
 async function onProfile(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
@@ -364,6 +524,53 @@ async function onProfile(interaction: ButtonInteraction, phrases: Phrases): Prom
     flags: MessageFlags.IsComponentsV2,
     components: [container],
     files: [file],
+  });
+}
+
+/** "It's my profile": the user confirmed the current candidate, so issue the bio code for it. */
+async function onConfirmProfile(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
+  await interaction.deferUpdate();
+
+  const discordId = interaction.user.id;
+  const state = pendingCandidates.get<PendingCandidates>(discordId);
+  if (!state) {
+    await replyText(interaction, phrases["error.timeout"], Colors.Red);
+    return;
+  }
+
+  pendingCandidates.del(discordId);
+  const candidate = state.candidates[state.index]!;
+  pendingVerifications.set<PendingVerification>(discordId, { vrchat_id: candidate.id });
+
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [buildCodeContainer(candidate.id, phrases)],
+  });
+}
+
+/** "No, that's not me": advance to the next candidate, or give up after the last one. */
+async function onRejectProfile(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
+  await interaction.deferUpdate();
+
+  const discordId = interaction.user.id;
+  const state = pendingCandidates.get<PendingCandidates>(discordId);
+  if (!state) {
+    await replyText(interaction, phrases["error.timeout"], Colors.Red);
+    return;
+  }
+
+  const nextIndex = state.index + 1;
+  if (nextIndex >= state.candidates.length) {
+    pendingCandidates.del(discordId);
+    await replyText(interaction, phrases["error.profile_not_confirmed"], Colors.Red);
+    return;
+  }
+
+  const nextState: PendingCandidates = { candidates: state.candidates, index: nextIndex };
+  pendingCandidates.set<PendingCandidates>(discordId, nextState);
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [buildCandidateContainer(nextState, phrases)],
   });
 }
 
@@ -380,6 +587,16 @@ const verificationData = new SlashCommandBuilder()
   })
   .addStringOption((opt) =>
     opt.setName("vrchat").setDescription("Your VRChat profile URL.").setRequired(false),
+  )
+  .addStringOption((opt) =>
+    opt
+      .setName("username")
+      .setDescription("Your VRChat username, as an alternative to your profile URL.")
+      .setDescriptionLocalizations({
+        [Locale.SpanishLATAM]: "Tu nombre de usuario de VRChat, como alternativa a la URL de tu perfil.",
+        [Locale.SpanishES]: "Tu nombre de usuario de VRChat, por si pasas de pegar la URL, colega.",
+      })
+      .setRequired(false),
   );
 
 async function executeVerification(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -400,25 +617,70 @@ async function executeVerification(interaction: ChatInputCommandInteraction): Pr
 
   // Already verified: offer to unverify.
   if (profileData) {
-    const embed = new EmbedBuilder()
-      .setColor(Colors.Red)
-      .setTitle(phrases["embed.title"])
-      .setDescription(phrases["unverify.description"]);
     await interaction.editReply({
-      embeds: [embed],
+      flags: MessageFlags.IsComponentsV2,
       components: [
-        new ActionRowBuilder<ButtonBuilder>().addComponents(
-          unverifyButton(phrases),
-          cancelButton(phrases),
-        ),
+        new ContainerBuilder()
+          .setAccentColor(Colors.Red)
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              `## ${phrases["embed.title"]}\n\n${phrases["unverify.description"]}`,
+            ),
+          )
+          .addActionRowComponents(
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              unverifyButton(phrases),
+              cancelButton(phrases),
+            ),
+          ),
       ],
     });
     return;
   }
 
-  // No VRChat id supplied: show the instructional video.
+  // Resolve the VRChat id from either the profile URL or, in parallel, the supplied username.
   const rawVrchat = interaction.options.getString("vrchat");
+  const rawUsername = interaction.options.getString("username");
+
   const vrchatId = rawVrchat ? getVRChatId(rawVrchat) : null;
+
+  // A username was given (and no usable URL): names can collide, so instead of trusting the top hit we
+  // fetch up to a few candidates and let the user confirm which profile is theirs before issuing a code.
+  if (!vrchatId && rawUsername) {
+    const search = await VRCHAT_CLIENT.searchUsers({
+      query: { search: rawUsername, n: MAX_PROFILE_CANDIDATES },
+    });
+    const results = search.data as unknown as VRChatUser[] | undefined;
+    if (!results || results.length === 0) {
+      await interaction.editReply({
+        flags: MessageFlags.IsComponentsV2,
+        components: [
+          textContainer(
+            phrases["error.username_not_found"].replace("{name}", rawUsername),
+            Colors.Red,
+          ),
+        ],
+      });
+      return;
+    }
+
+    const candidates: ProfileCandidate[] = results.map((user) => {
+      const avatarUrl = user.profilePicOverride || user.currentAvatarImageUrl;
+      return avatarUrl
+        ? { id: user.id, displayName: user.displayName, avatarUrl }
+        : { id: user.id, displayName: user.displayName };
+    });
+    const state: PendingCandidates = { candidates, index: 0 };
+    pendingCandidates.set<PendingCandidates>(interaction.user.id, state);
+
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [buildCandidateContainer(state, phrases)],
+    });
+    return;
+  }
+
+  // No VRChat id supplied: show the instructional video.
   if (!vrchatId) {
     const { container, file } = buildVideoContainer(phrases);
     await interaction.editReply({
@@ -429,20 +691,11 @@ async function executeVerification(interaction: ChatInputCommandInteraction): Pr
     return;
   }
 
-  const verificationCode = generateCodeByVRChat(vrchatId);
   pendingVerifications.set<PendingVerification>(interaction.user.id, { vrchat_id: vrchatId });
 
-  const embed = new EmbedBuilder()
-    .setColor(Colors.Aqua)
-    .setTitle(phrases["embed.title"])
-    .setDescription(phrases["embed.description"].replace("{code}", verificationCode))
-    .setFooter({ text: phrases["embed.footer"] });
-
   await interaction.editReply({
-    embeds: [embed],
-    components: [
-      new ActionRowBuilder<ButtonBuilder>().addComponents(verifyButton(phrases), cancelButton(phrases)),
-    ],
+    flags: MessageFlags.IsComponentsV2,
+    components: [buildCodeContainer(vrchatId, phrases)],
   });
 }
 
@@ -462,6 +715,12 @@ async function handleVerificationButton(interaction: ButtonInteraction): Promise
       break;
     case BUTTON.PROFILE:
       await onProfile(interaction, phrases);
+      break;
+    case BUTTON.CONFIRM_PROFILE:
+      await onConfirmProfile(interaction, phrases);
+      break;
+    case BUTTON.REJECT_PROFILE:
+      await onRejectProfile(interaction, phrases);
       break;
     default:
       break;

@@ -9,7 +9,7 @@
 // Imports
 // =========================================================================================================
 
-import { AttachmentBuilder, Colors, EmbedBuilder, Locale } from "discord.js";
+import { AttachmentBuilder, Colors, ContainerBuilder, Locale, MessageFlags } from "discord.js";
 import type {
   ChatInputCommandInteraction,
   SlashCommandSubcommandGroupBuilder,
@@ -18,6 +18,7 @@ import type {
 import { createLocalizer } from "../../lib/i18n.js";
 import { printMessage } from "../../lib/logger.js";
 import { D1Class } from "../../services/d1.js";
+import { buildContainer } from "../../ui/container.js";
 import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
@@ -94,13 +95,8 @@ interface BanTarget {
 // Helpers
 // =========================================================================================================
 
-function buildErrorEmbed(title: string, description: string, color: number): EmbedBuilder {
-  return new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(description)
-    .setColor(color)
-    .setThumbnail(ERROR_IMAGE_URL)
-    .setTimestamp();
+function buildErrorContainer(title: string, description: string, color: number): ContainerBuilder {
+  return buildContainer({ title, description, color, thumbnail: ERROR_IMAGE_URL });
 }
 
 /** Resolves the ban target from whichever subcommand was used. */
@@ -168,8 +164,9 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
     profileData = await D1Class.getProfile(userRequestData, target.id, false);
   } catch {
     await interaction.editReply({
-      embeds: [
-        buildErrorEmbed(
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildErrorContainer(
           phrases["error.user_not_found_title"],
           phrases["error.user_not_found"],
           Colors.Red,
@@ -182,8 +179,9 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
 
   if (profileData.is_banned) {
     await interaction.editReply({
-      embeds: [
-        buildErrorEmbed(
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildErrorContainer(
           phrases["error.already_banned_title"],
           phrases["error.already_banned"],
           Colors.Orange,
@@ -197,27 +195,32 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
   try {
     await D1Class.banProfile(userRequestData, target.id, banReason);
 
-    const embed = new EmbedBuilder()
-      .setTitle(phrases["success.title"])
-      .setDescription(phrases["success.description"].replace("{username}", target.displayName))
-      .addFields({ name: "​", value: phrases["success.reason"].replace("{reason}", banReason) })
-      .setColor(Colors.Green)
-      .setFooter({
-        text: phrases["success.footer"].replace("{moderator}", interaction.user.displayName),
-        iconURL: interaction.user.displayAvatarURL(),
-      })
-      .setTimestamp();
+    const description =
+      `${phrases["success.description"].replace("{username}", target.displayName)}\n\n` +
+      `${phrases["success.reason"].replace("{reason}", banReason)}`;
 
-    if (target.avatarUrl) {
-      embed.setThumbnail(target.avatarUrl);
-    }
-
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildContainer({
+          color: Colors.Green,
+          title: phrases["success.title"],
+          description,
+          thumbnail: target.avatarUrl ?? undefined,
+          footer: phrases["success.footer"].replace("{moderator}", interaction.user.displayName),
+        }),
+      ],
+    });
   } catch (error) {
     printMessage("staff user ban error:", String(error));
     await interaction.editReply({
-      embeds: [
-        buildErrorEmbed(phrases["error.ban_failed_title"], phrases["error.ban_failed"], Colors.Red),
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildErrorContainer(
+          phrases["error.ban_failed_title"],
+          phrases["error.ban_failed"],
+          Colors.Red,
+        ),
       ],
       files: [errorImage],
     });

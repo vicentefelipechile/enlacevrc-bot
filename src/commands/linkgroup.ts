@@ -17,7 +17,6 @@ import {
   ButtonStyle,
   Colors,
   ContainerBuilder,
-  EmbedBuilder,
   Locale,
   MediaGalleryBuilder,
   MessageFlags,
@@ -44,6 +43,7 @@ import { printMessage } from "../lib/logger.js";
 import { D1Class, D1RequestError } from "../services/d1.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
 import type { BotClient } from "../types/client.js";
+import { buildContainer } from "../ui/container.js";
 
 
 // =========================================================================================================
@@ -508,22 +508,18 @@ async function onAcceptTerms(interaction: ButtonInteraction, phrases: Phrases): 
       `Joined group ${state.groupName} by ${interaction.user.username} (${interaction.user.id})`,
     );
 
-    const embed = new EmbedBuilder()
-      .setTitle(phrases["log.action.title"].replace("{groupName}", state.groupName))
-      .setDescription(
-        phrases["log.action.actionid"]
-          .replace("{action_id}", logId !== null ? String(logId) : "—")
-          .replace("{vrchat_group_id}", state.groupId),
-      )
-      .setColor(Colors.Blurple)
-      .setTimestamp()
-      .setFooter({
-        text: phrases["log.action.by"].replace("{user}", interaction.user.username),
-        iconURL: interaction.user.displayAvatarURL(),
-      });
+    const logContainer = buildContainer({
+      color: Colors.Blurple,
+      title: phrases["log.action.title"].replace("{groupName}", state.groupName),
+      description: phrases["log.action.actionid"]
+        .replace("{action_id}", logId !== null ? String(logId) : "—")
+        .replace("{vrchat_group_id}", state.groupId),
+      footer: phrases["log.action.by"].replace("{user}", interaction.user.username),
+    });
 
     await (logChannel as TextBasedChannel & { send: (o: unknown) => Promise<unknown> }).send({
-      embeds: [embed],
+      flags: MessageFlags.IsComponentsV2,
+      components: [logContainer],
     });
   } catch (error) {
     printMessage("Error accepting group invitation:", String(error));

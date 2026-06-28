@@ -13,9 +13,11 @@
 // Imports
 // =========================================================================================================
 
+import { Colors, MessageFlags } from "discord.js";
 import type { Interaction } from "discord.js";
 
 import { printMessage } from "../lib/logger.js";
+import { textContainer } from "../ui/container.js";
 import type { BotClient } from "../types/client.js";
 import type { Command } from "../commands/types.js";
 
@@ -30,7 +32,10 @@ async function reportError(
 ): Promise<void> {
   console.error(error);
 
-  const payload = { content: "An unexpected error occurred.", ephemeral: true } as const;
+  const payload = {
+    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    components: [textContainer("An unexpected error occurred.", Colors.Red)],
+  } as const;
   try {
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp(payload);

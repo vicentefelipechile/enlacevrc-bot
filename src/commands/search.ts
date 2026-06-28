@@ -14,6 +14,7 @@ import {
   AttachmentBuilder,
   ButtonBuilder,
   ButtonStyle,
+  Colors,
   ComponentType,
   ContainerBuilder,
   Locale,
@@ -32,6 +33,7 @@ import type { Command } from "./types.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { printMessage } from "../lib/logger.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
+import { textContainer } from "../ui/container.js";
 
 // =========================================================================================================
 // Constants
@@ -445,7 +447,12 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   const sanitizedQuery = sanitizeQuery(query);
 
   if (sanitizedQuery.length === 0) {
-    await interaction.editReply({ content: phrases["error.no_results"].replace("{query}", query) });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        textContainer(phrases["error.no_results"].replace("{query}", query), Colors.Red),
+      ],
+    });
     return;
   }
 
@@ -496,7 +503,10 @@ async function runWorldSearch(
 ): Promise<void> {
   const worlds = await getWorlds(query, FIRST_PAGE);
   if (worlds.length === 0) {
-    await interaction.editReply({ content: noResults });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(noResults, Colors.Red)],
+    });
     return;
   }
 
@@ -522,7 +532,10 @@ async function runUserSearch(
 ): Promise<void> {
   const users = await getUsers(query, FIRST_PAGE);
   if (users.length === 0) {
-    await interaction.editReply({ content: noResults });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(noResults, Colors.Red)],
+    });
     return;
   }
 
@@ -548,7 +561,10 @@ async function runAvatarSearch(
 ): Promise<void> {
   const avatars = await getAvatars(FIRST_PAGE, query);
   if (avatars.length === 0) {
-    await interaction.editReply({ content: noResults });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(noResults, Colors.Red)],
+    });
     return;
   }
 

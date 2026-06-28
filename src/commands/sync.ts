@@ -10,8 +10,9 @@
 
 import {
   Colors,
-  EmbedBuilder,
+  ContainerBuilder,
   Locale,
+  MessageFlags,
   PermissionsBitField,
   SlashCommandBuilder,
 } from "discord.js";
@@ -21,6 +22,7 @@ import type { Command } from "./types.js";
 import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { D1Class } from "../services/d1.js";
+import { buildContainer, textContainer } from "../ui/container.js";
 
 
 // =========================================================================================================
@@ -105,14 +107,14 @@ interface SyncChanges {
 // Helpers
 // =========================================================================================================
 
-/** Builds a red error embed from a title and description. */
-function errorEmbed(title: string, description: string): EmbedBuilder {
-  return new EmbedBuilder().setColor(Colors.Red).setTitle(title).setDescription(description);
+/** Builds a red error container from a title and description. */
+function errorContainer(title: string, description: string): ContainerBuilder {
+  return buildContainer({ color: Colors.Red, title, description });
 }
 
 /**
  * Attempts to grant a role to the member, respecting role hierarchy. Returns null on success or an
- * error embed describing the failure (hierarchy issue or API error).
+ * error container describing the failure (hierarchy issue or API error).
  */
 async function grantRole(
   member: GuildMember,
@@ -121,13 +123,13 @@ async function grantRole(
   changes: SyncChanges,
   phrases: Phrases,
   failKey: "log.role_fail" | "log.plus_role_fail",
-): Promise<EmbedBuilder | null> {
+): Promise<ContainerBuilder | null> {
   if (member.roles.cache.has(role.id)) {
     return null;
   }
 
   if (botMember.roles.highest.position <= role.position) {
-    return errorEmbed(
+    return errorContainer(
       phrases["error.role_hierarchy"].replace("{role}", role.name),
       phrases["solution.role_hierarchy"].replace("{role}", role.name),
     );
@@ -139,7 +141,7 @@ async function grantRole(
     return null;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return errorEmbed(
+    return errorContainer(
       phrases[failKey].replace("{role}", role.name).replace("{error}", message),
       String(error),
     );
@@ -163,9 +165,15 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
   const phrases = localize(interaction.locale);
 
+  const replyText = (content: string, color: number = Colors.Red): Promise<unknown> =>
+    interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(content, color)],
+    });
+
   // Sync only makes sense inside a guild with a resolved member.
   if (!interaction.guild || !(interaction.member instanceof Object)) {
-    await interaction.editReply({ content: phrases["error.no_profile"] });
+    await replyText(phrases["error.no_profile"]);
     return;
   }
 
@@ -182,12 +190,12 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   }
 
   if (!profileData) {
-    await interaction.editReply({ content: phrases["error.no_profile"], embeds: [] });
+    await replyText(phrases["error.no_profile"]);
     return;
   }
 
   if (profileData.is_banned) {
-    await interaction.editReply({ content: phrases["error.banned"], embeds: [] });
+    await replyText(phrases["error.banned"]);
     return;
   }
 
@@ -198,7 +206,8 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
   if (!botMember.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
     await interaction.editReply({
-      embeds: [errorEmbed(phrases["error.bot_no_perm"], phrases["solution.bot_no_perm"])],
+      flags: MessageFlags.IsComponentsV2,
+      components: [errorContainer(phrases["error.bot_no_perm"], phrases["solution.bot_no_perm"])],
     });
     return;
   }
@@ -212,7 +221,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
     if (role) {
       const failure = await grantRole(member, botMember, role, changes, phrases, "log.role_fail");
       if (failure) {
-        await interaction.editReply({ embeds: [failure] });
+        await interaction.editReply({
+          flags: MessageFlags.IsComponentsV2,
+          components: [failure],
+        });
         return;
       }
     }
@@ -230,7 +242,8 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
         }
       } catch (error) {
         await interaction.editReply({
-          embeds: [errorEmbed(phrases["log.nickname_fail"], String(error))],
+          flags: MessageFlags.IsComponentsV2,
+          components: [errorContainer(phrases["log.nickname_fail"], String(error))],
         });
         return;
       }
@@ -252,7 +265,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
           "log.plus_role_fail",
         );
         if (failure) {
-          await interaction.editReply({ embeds: [failure] });
+          await interaction.editReply({
+            flags: MessageFlags.IsComponentsV2,
+            components: [failure],
+          });
           return;
         }
       }
@@ -260,31 +276,30 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   }
 
   // Build the success response.
-  const embed = new EmbedBuilder()
-    .setColor(Colors.Green)
-    .setTitle(phrases["success.title"])
-    .setDescription(phrases["success.description"]);
-
-  let hasChanges = false;
+  const sections: string[] = [];
 
   if (changes.rolesAdded.length > 0) {
-    embed.addFields({
-      name: phrases["success.roles_title"],
-      value: changes.rolesAdded.map((role) => `\n- ${role}`).join(""),
-    });
-    hasChanges = true;
+    sections.push(
+      `**${phrases["success.roles_title"]}**` +
+        changes.rolesAdded.map((role) => `\n- ${role}`).join(""),
+    );
   }
 
   if (changes.nicknameUpdated && changes.nickname) {
-    embed.addFields({ name: phrases["success.nickname_title"], value: changes.nickname });
-    hasChanges = true;
+    sections.push(`**${phrases["success.nickname_title"]}**\n${changes.nickname}`);
   }
 
-  if (!hasChanges) {
-    embed.setDescription(phrases["success.no_changes"]);
-  }
+  const hasChanges = sections.length > 0;
+  const description = hasChanges
+    ? `${phrases["success.description"]}\n\n${sections.join("\n\n")}`
+    : phrases["success.no_changes"];
 
-  await interaction.editReply({ embeds: [embed] });
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [
+      buildContainer({ color: Colors.Green, title: phrases["success.title"], description }),
+    ],
+  });
 }
 
 export const command: Command = { data, execute };

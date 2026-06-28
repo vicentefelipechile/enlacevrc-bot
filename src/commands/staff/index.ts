@@ -11,10 +11,11 @@
 // Imports
 // =========================================================================================================
 
-import { Locale, SlashCommandBuilder } from "discord.js";
+import { Colors, Locale, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { ChatInputCommandInteraction } from "discord.js";
 
 import { createLocalizer } from "../../lib/i18n.js";
+import { textContainer } from "../../ui/container.js";
 import type { Command } from "../types.js";
 import * as memberAdd from "./member-add.js";
 import * as memberList from "./member-list.js";
@@ -114,7 +115,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   const phrases = localize(interaction.locale);
 
   if (!(await isStaff(interaction.user.id, interaction.user.username))) {
-    await interaction.editReply({ content: phrases["error.no_permission"] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.no_permission"], Colors.Red)],
+    });
     return;
   }
 
@@ -123,7 +127,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   const handler = ROUTES[`${group}:${sub}`];
 
   if (!handler) {
-    await interaction.editReply({ content: phrases["error.unknown"] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.unknown"], Colors.Red)],
+    });
     return;
   }
 

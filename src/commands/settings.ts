@@ -10,8 +10,8 @@
 
 import {
   Colors,
-  EmbedBuilder,
   Locale,
+  MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
@@ -22,6 +22,7 @@ import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { printMessage } from "../lib/logger.js";
 import { D1Class } from "../services/d1.js";
+import { buildContainer, textContainer } from "../ui/container.js";
 
 
 // =========================================================================================================
@@ -238,8 +239,14 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
   const phrases = localize(interaction.locale);
 
+  const reply = (content: string, color: number = Colors.Green): Promise<unknown> =>
+    interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(content, color)],
+    });
+
   if (!interaction.guild) {
-    await interaction.editReply({ content: phrases["error.general"] });
+    await reply(phrases["error.general"], Colors.Red);
     return;
   }
 
@@ -261,9 +268,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
           SUBCOMMAND.VERIFICATION_ROLE,
           role.id,
         );
-        await interaction.editReply({
-          content: phrases["success.verification_role"].replace("{role}", `<@&${role.id}>`),
-        });
+        await reply(phrases["success.verification_role"].replace("{role}", `<@&${role.id}>`));
         break;
       }
 
@@ -275,9 +280,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
           SUBCOMMAND.VERIFICATION_PLUS_ROLE,
           role.id,
         );
-        await interaction.editReply({
-          content: phrases["success.verification_plus_role"].replace("{role}", `<@&${role.id}>`),
-        });
+        await reply(phrases["success.verification_plus_role"].replace("{role}", `<@&${role.id}>`));
         break;
       }
 
@@ -291,9 +294,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
           value,
         );
         const status = enabled ? phrases["status.enabled"] : phrases["status.disabled"];
-        await interaction.editReply({
-          content: phrases["success.auto_nickname"].replace("{status}", status),
-        });
+        await reply(phrases["success.auto_nickname"].replace("{status}", status));
         break;
       }
 
@@ -305,46 +306,34 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
           SUBCOMMAND.LOG_CHANNEL,
           channel.id,
         );
-        await interaction.editReply({
-          content: phrases["success.log_channel"].replace("{channel}", `<#${channel.id}>`),
-        });
+        await reply(phrases["success.log_channel"].replace("{channel}", `<#${channel.id}>`));
         break;
       }
 
       case SUBCOMMAND.VIEW: {
         const settings = await D1Class.getAllDiscordSettings(userRequestData, serverId);
-        const embed = new EmbedBuilder()
-          .setColor(Colors.Blue)
-          .setTitle(phrases["view.title"].replace("{serverName}", guild.name))
-          .setDescription(phrases["view.description"])
-          .addFields(
-            {
-              name: phrases["view.verification_role"],
-              value: formatRole(settings[SUBCOMMAND.VERIFICATION_ROLE], guild, phrases),
-              inline: false,
-            },
-            {
-              name: phrases["view.verification_plus_role"],
-              value: formatRole(settings[SUBCOMMAND.VERIFICATION_PLUS_ROLE], guild, phrases),
-              inline: false,
-            },
-            {
-              name: phrases["view.auto_nickname"],
-              value: formatBoolean(settings[SUBCOMMAND.AUTO_NICKNAME], phrases),
-              inline: false,
-            },
-            {
-              name: phrases["view.log_channel"],
-              value: formatChannel(settings[SUBCOMMAND.LOG_CHANNEL], guild, phrases),
-              inline: false,
-            },
-          )
-          .setTimestamp();
+        const description =
+          `${phrases["view.description"]}\n\n` +
+          `**${phrases["view.verification_role"]}** ` +
+          `${formatRole(settings[SUBCOMMAND.VERIFICATION_ROLE], guild, phrases)}\n` +
+          `**${phrases["view.verification_plus_role"]}** ` +
+          `${formatRole(settings[SUBCOMMAND.VERIFICATION_PLUS_ROLE], guild, phrases)}\n` +
+          `**${phrases["view.auto_nickname"]}** ` +
+          `${formatBoolean(settings[SUBCOMMAND.AUTO_NICKNAME], phrases)}\n` +
+          `**${phrases["view.log_channel"]}** ` +
+          `${formatChannel(settings[SUBCOMMAND.LOG_CHANNEL], guild, phrases)}`;
 
-        const guildIcon = guild.iconURL() ?? undefined;
-        embed.setAuthor(guildIcon ? { name: guild.name, iconURL: guildIcon } : { name: guild.name });
-
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({
+          flags: MessageFlags.IsComponentsV2,
+          components: [
+            buildContainer({
+              color: Colors.Blue,
+              title: phrases["view.title"].replace("{serverName}", guild.name),
+              description,
+              thumbnail: guild.iconURL() ?? undefined,
+            }),
+          ],
+        });
         break;
       }
 
@@ -376,9 +365,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
             DISCORD_SERVER_SETTINGS.LOG_CHANNEL,
             RESET_VALUE,
           );
-          await interaction.editReply({
-            content: phrases["success.reset_all"],
-          });
+          await reply(phrases["success.reset_all"]);
           break;
         }
 
@@ -387,20 +374,18 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
           await D1Class.updateDiscordSetting(userRequestData, serverId, choice.key, RESET_VALUE);
         }
         const resetLabel = phrases[`reset.${settingToReset}` as keyof Phrases] ?? settingToReset;
-        await interaction.editReply({
-          content: phrases["success.reset"].replace("{setting}", resetLabel),
-        });
+        await reply(phrases["success.reset"].replace("{setting}", resetLabel));
         break;
       }
 
       default:
-        await interaction.editReply({ content: phrases["error.general"] });
+        await reply(phrases["error.general"], Colors.Red);
         break;
     }
   } catch (error) {
     // Bug fix: the original referenced the non-existent key `error.error`; use `error.general`.
     printMessage("Settings command error:", String(error));
-    await interaction.editReply({ content: phrases["error.general"] });
+    await reply(phrases["error.general"], Colors.Red);
   }
 }
 

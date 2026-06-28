@@ -7,7 +7,7 @@
 // Imports
 // =========================================================================================================
 
-import { Colors, EmbedBuilder, Locale } from "discord.js";
+import { Colors, Locale, MessageFlags } from "discord.js";
 import type {
   ChatInputCommandInteraction,
   SlashCommandSubcommandGroupBuilder,
@@ -16,6 +16,7 @@ import type {
 import { createLocalizer } from "../../lib/i18n.js";
 import { printMessage } from "../../lib/logger.js";
 import { D1Class } from "../../services/d1.js";
+import { buildContainer, textContainer } from "../../ui/container.js";
 import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
@@ -72,12 +73,18 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
     staffList = await D1Class.listStaff(userRequestData, false);
   } catch (error) {
     printMessage("staff member list error:", String(error));
-    await interaction.editReply({ content: phrases["error.general"] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.general"], Colors.Red)],
+    });
     return;
   }
 
   if (staffList.length === 0) {
-    await interaction.editReply({ content: phrases.empty });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases.empty)],
+    });
     return;
   }
 
@@ -89,11 +96,14 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
     )
     .join("\n");
 
-  const embed = new EmbedBuilder()
-    .setColor(Colors.Blurple)
-    .setTitle(phrases["list.title"].replace("{count}", String(staffList.length)))
-    .setDescription(description)
-    .setTimestamp();
-
-  await interaction.editReply({ embeds: [embed] });
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [
+      buildContainer({
+        color: Colors.Blurple,
+        title: phrases["list.title"].replace("{count}", String(staffList.length)),
+        description,
+      }),
+    ],
+  });
 }

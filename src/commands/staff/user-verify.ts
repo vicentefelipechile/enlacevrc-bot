@@ -8,7 +8,14 @@
 // Imports
 // =========================================================================================================
 
-import { AttachmentBuilder, Colors, EmbedBuilder, Locale, PermissionsBitField } from "discord.js";
+import {
+  AttachmentBuilder,
+  Colors,
+  ContainerBuilder,
+  Locale,
+  MessageFlags,
+  PermissionsBitField,
+} from "discord.js";
 import type {
   ChatInputCommandInteraction,
   GuildMember,
@@ -21,6 +28,7 @@ import { createLocalizer } from "../../lib/i18n.js";
 import { getRandomColor } from "../../lib/random-color.js";
 import { D1Class } from "../../services/d1.js";
 import type { Profile } from "../../types/models.js";
+import { buildContainer } from "../../ui/container.js";
 import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
@@ -123,36 +131,24 @@ type Phrases = ReturnType<typeof localize>;
 // Helpers
 // =========================================================================================================
 
-function errorEmbed(title: string, description?: string): EmbedBuilder {
-  const embed = new EmbedBuilder()
-    .setTitle(title)
-    .setColor(Colors.Red)
-    .setThumbnail(ERROR_IMAGE_URL)
-    .setTimestamp();
-  if (description) {
-    embed.setDescription(description);
-  }
-  return embed;
+function errorContainer(title: string, description?: string): ContainerBuilder {
+  return buildContainer({ title, description, color: Colors.Red, thumbnail: ERROR_IMAGE_URL });
 }
 
-function successEmbed(
+function successContainer(
   member: GuildMember,
   phrases: Phrases,
   titleKey: "success.title" | "success_already.title",
   descriptionKey: "success.description" | "success_already.description",
   moderatorName: string,
-  moderatorAvatar: string,
-): EmbedBuilder {
-  return new EmbedBuilder()
-    .setTitle(phrases[titleKey])
-    .setDescription(phrases[descriptionKey].replace("{username}", member.displayName))
-    .setColor(getRandomColor())
-    .setThumbnail(member.displayAvatarURL())
-    .setFooter({
-      text: phrases["success.footer"].replace("{moderator}", moderatorName),
-      iconURL: moderatorAvatar,
-    })
-    .setTimestamp();
+): ContainerBuilder {
+  return buildContainer({
+    color: getRandomColor(),
+    title: phrases[titleKey],
+    description: phrases[descriptionKey].replace("{username}", member.displayName),
+    thumbnail: member.displayAvatarURL(),
+    footer: phrases["success.footer"].replace("{moderator}", moderatorName),
+  });
 }
 
 // =========================================================================================================
@@ -182,7 +178,8 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
 
   if (!interaction.guild) {
     await interaction.editReply({
-      embeds: [errorEmbed(phrases["error.chat_is_dm"])],
+      flags: MessageFlags.IsComponentsV2,
+      components: [errorContainer(phrases["error.chat_is_dm"])],
       files: [errorImage],
     });
     return;
@@ -199,8 +196,9 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
     profileData = await D1Class.getProfile(userRequestData, targetUser.id, false);
   } catch {
     await interaction.editReply({
-      embeds: [
-        errorEmbed(phrases["error.user_not_verified_title"], phrases["error.user_not_verified"]),
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        errorContainer(phrases["error.user_not_verified_title"], phrases["error.user_not_verified"]),
       ],
       files: [errorImage],
     });
@@ -222,7 +220,10 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
 
   if (!verificationRole || !verificationPlusRole) {
     await interaction.editReply({
-      embeds: [errorEmbed(phrases["error.role_not_found_title"], phrases["error.role_not_found"])],
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        errorContainer(phrases["error.role_not_found_title"], phrases["error.role_not_found"]),
+      ],
       files: [errorImage],
     });
     return;
@@ -233,7 +234,8 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
   const botMember = await guild.members.fetchMe();
   if (!botMember.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
     await interaction.editReply({
-      embeds: [errorEmbed(phrases["error.bot_no_perm_title"], phrases["error.bot_no_perm"])],
+      flags: MessageFlags.IsComponentsV2,
+      components: [errorContainer(phrases["error.bot_no_perm_title"], phrases["error.bot_no_perm"])],
       files: [errorImage],
     });
     return;
@@ -244,8 +246,9 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
   );
   if (unmanageableRole) {
     await interaction.editReply({
-      embeds: [
-        errorEmbed(
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        errorContainer(
           phrases["error.role_hierarchy_title"],
           phrases["error.role_hierarchy"].replace("{role}", unmanageableRole.name),
         ),
@@ -272,14 +275,14 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
   if (!hasPlusRole && profileData.is_verified) {
     await member.roles.add(verificationPlusRole.id);
     await interaction.editReply({
-      embeds: [
-        successEmbed(
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        successContainer(
           member,
           phrases,
           "success_already.title",
           "success_already.description",
           interaction.user.displayName,
-          interaction.user.displayAvatarURL(),
         ),
       ],
     });
@@ -289,12 +292,13 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
   // Already has the role and is verified: nothing to do.
   if (hasPlusRole && profileData.is_verified) {
     await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle(phrases["error.already_verified_title"])
-          .setDescription(phrases["error.user_already_has_role"])
-          .setColor(Colors.Green)
-          .setTimestamp(),
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildContainer({
+          color: Colors.Green,
+          title: phrases["error.already_verified_title"],
+          description: phrases["error.user_already_has_role"],
+        }),
       ],
     });
     return;
@@ -309,21 +313,22 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
     });
 
     await interaction.editReply({
-      embeds: [
-        successEmbed(
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        successContainer(
           member,
           phrases,
           "success.title",
           "success.description",
           interaction.user.displayName,
-          interaction.user.displayAvatarURL(),
         ),
       ],
     });
   } catch {
     await interaction.editReply({
-      embeds: [
-        errorEmbed(phrases["error.assignment_failed_title"], phrases["error.failed_to_assign"]),
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        errorContainer(phrases["error.assignment_failed_title"], phrases["error.failed_to_assign"]),
       ],
       files: [errorImage],
     });

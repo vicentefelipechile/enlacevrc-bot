@@ -7,7 +7,7 @@
 // Imports
 // =========================================================================================================
 
-import { Locale, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { Colors, Locale, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { ChatInputCommandInteraction } from "discord.js";
 
 import type { Command } from "./types.js";
@@ -15,6 +15,7 @@ import { env } from "../config/env.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { D1Class } from "../services/d1.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
+import { textContainer } from "../ui/container.js";
 import { formatProfileEmbed } from "../ui/profile.js";
 import type { VRChatUser } from "../ui/profile.js";
 
@@ -102,12 +103,18 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   const targetUser = interaction.options.getUser("user", true);
 
   if (targetUser.id === env.DISCORD_CLIENT_ID) {
-    await interaction.editReply({ content: phrases["error.is_the_bot"], embeds: [] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.is_the_bot"], Colors.Red)],
+    });
     return;
   }
 
   if (targetUser.bot) {
-    await interaction.editReply({ content: phrases["error.is_bot"], embeds: [] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.is_bot"], Colors.Red)],
+    });
     return;
   }
 
@@ -120,7 +127,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   try {
     profileData = await D1Class.getProfile(userRequestData, targetUser.id);
   } catch {
-    await interaction.editReply({ content: phrases["error.not_verified_user"], embeds: [] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.not_verified_user"], Colors.Red)],
+    });
     return;
   }
 

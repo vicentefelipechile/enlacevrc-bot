@@ -8,7 +8,7 @@
 // Imports
 // =========================================================================================================
 
-import { Colors, EmbedBuilder, Locale } from "discord.js";
+import { Colors, Locale, MessageFlags } from "discord.js";
 import type {
   ChatInputCommandInteraction,
   SlashCommandSubcommandGroupBuilder,
@@ -17,6 +17,7 @@ import type {
 import { createLocalizer } from "../../lib/i18n.js";
 import { printMessage } from "../../lib/logger.js";
 import { D1Class } from "../../services/d1.js";
+import { buildContainer, textContainer } from "../../ui/container.js";
 import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
@@ -78,7 +79,13 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
     const existing = await D1Class.getStaff(userRequestData, targetUser.id, false);
     if (existing) {
       await interaction.editReply({
-        content: phrases["error.already_staff"].replace("{username}", targetUser.displayName),
+        flags: MessageFlags.IsComponentsV2,
+        components: [
+          textContainer(
+            phrases["error.already_staff"].replace("{username}", targetUser.displayName),
+            Colors.Red,
+          ),
+        ],
       });
       return;
     }
@@ -92,16 +99,22 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
       discord_name: targetUser.username,
     });
 
-    const embed = new EmbedBuilder()
-      .setColor(Colors.Green)
-      .setTitle(phrases["success.title"])
-      .setDescription(phrases["success.description"].replace("{username}", targetUser.displayName))
-      .setThumbnail(targetUser.displayAvatarURL())
-      .setTimestamp();
-
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildContainer({
+          color: Colors.Green,
+          title: phrases["success.title"],
+          description: phrases["success.description"].replace("{username}", targetUser.displayName),
+          thumbnail: targetUser.displayAvatarURL(),
+        }),
+      ],
+    });
   } catch (error) {
     printMessage("staff member add error:", String(error));
-    await interaction.editReply({ content: phrases["error.general"] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.general"], Colors.Red)],
+    });
   }
 }

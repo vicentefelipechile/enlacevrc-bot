@@ -7,7 +7,7 @@
 // Imports
 // =========================================================================================================
 
-import { AttachmentBuilder, Colors, EmbedBuilder, Locale } from "discord.js";
+import { AttachmentBuilder, Colors, ContainerBuilder, Locale, MessageFlags } from "discord.js";
 import type {
   ChatInputCommandInteraction,
   SlashCommandSubcommandGroupBuilder,
@@ -16,6 +16,7 @@ import type {
 import { createLocalizer } from "../../lib/i18n.js";
 import { printMessage } from "../../lib/logger.js";
 import { D1Class } from "../../services/d1.js";
+import { buildContainer } from "../../ui/container.js";
 import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
@@ -72,13 +73,8 @@ const localize = createLocalizer({
 // Helpers
 // =========================================================================================================
 
-function buildErrorEmbed(title: string, description: string, color: number): EmbedBuilder {
-  return new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(description)
-    .setColor(color)
-    .setThumbnail(ERROR_IMAGE_URL)
-    .setTimestamp();
+function buildErrorContainer(title: string, description: string, color: number): ContainerBuilder {
+  return buildContainer({ title, description, color, thumbnail: ERROR_IMAGE_URL });
 }
 
 // =========================================================================================================
@@ -115,8 +111,9 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
     profileData = await D1Class.getProfile(userRequestData, targetUser.id, false);
   } catch {
     await interaction.editReply({
-      embeds: [
-        buildErrorEmbed(
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildErrorContainer(
           phrases["error.user_not_found_title"],
           phrases["error.user_not_found"],
           Colors.Red,
@@ -129,8 +126,9 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
 
   if (!profileData.is_banned) {
     await interaction.editReply({
-      embeds: [
-        buildErrorEmbed(
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildErrorContainer(
           phrases["error.not_banned_title"],
           phrases["error.not_banned"],
           Colors.Orange,
@@ -144,23 +142,24 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
   try {
     await D1Class.unbanProfile(userRequestData, targetUser.id);
 
-    const embed = new EmbedBuilder()
-      .setTitle(phrases["success.title"])
-      .setDescription(phrases["success.description"].replace("{username}", targetUser.displayName))
-      .setColor(Colors.Green)
-      .setThumbnail(targetUser.displayAvatarURL())
-      .setFooter({
-        text: phrases["success.footer"].replace("{moderator}", interaction.user.displayName),
-        iconURL: interaction.user.displayAvatarURL(),
-      })
-      .setTimestamp();
-
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildContainer({
+          color: Colors.Green,
+          title: phrases["success.title"],
+          description: phrases["success.description"].replace("{username}", targetUser.displayName),
+          thumbnail: targetUser.displayAvatarURL(),
+          footer: phrases["success.footer"].replace("{moderator}", interaction.user.displayName),
+        }),
+      ],
+    });
   } catch (error) {
     printMessage("staff user unban error:", String(error));
     await interaction.editReply({
-      embeds: [
-        buildErrorEmbed(
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildErrorContainer(
           phrases["error.unban_failed_title"],
           phrases["error.unban_failed"],
           Colors.Red,

@@ -9,7 +9,7 @@
 // Imports
 // =========================================================================================================
 
-import { Colors, EmbedBuilder, Locale } from "discord.js";
+import { Colors, Locale, MessageFlags } from "discord.js";
 import type {
   ChatInputCommandInteraction,
   SlashCommandSubcommandGroupBuilder,
@@ -22,6 +22,7 @@ import { getVRChatId } from "../../lib/vrchat-code.js";
 import { D1Class } from "../../services/d1.js";
 import { VRCHAT_CLIENT } from "../../services/vrchat.js";
 import type { UserRequestData } from "../../types/models.js";
+import { buildContainer, textContainer } from "../../ui/container.js";
 import { staffRequestData } from "./permissions.js";
 
 // =========================================================================================================
@@ -180,8 +181,14 @@ export function build(group: SlashCommandSubcommandGroupBuilder): SlashCommandSu
 export async function run(interaction: ChatInputCommandInteraction): Promise<void> {
   const phrases = localize(interaction.locale);
 
+  const editText = (content: string, color: number = Colors.Blurple): Promise<unknown> =>
+    interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(content, color)],
+    });
+
   if (!interaction.guild) {
-    await interaction.editReply({ content: phrases["error.general"] });
+    await editText(phrases["error.general"], Colors.Red);
     return;
   }
 
@@ -190,38 +197,39 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
   const sanitizedVRChatId = getVRChatId(rawVrchatId);
 
   if (!sanitizedVRChatId || !isValidVRChatId(sanitizedVRChatId)) {
-    await interaction.editReply({ content: phrases["error.invalid_vrchat_id"] });
+    await editText(phrases["error.invalid_vrchat_id"], Colors.Red);
     return;
   }
 
   const userRequestData = staffRequestData(interaction.user.id, interaction.user.username);
 
   try {
-    await interaction.editReply({ content: phrases.checking_profile });
+    await editText(phrases.checking_profile);
 
     if (await profileExists(userRequestData, sanitizedVRChatId)) {
-      await interaction.editReply({ content: phrases["error.profile_exists"] });
+      await editText(phrases["error.profile_exists"], Colors.Red);
       return;
     }
 
     if (await profileExists(userRequestData, discordUser.id)) {
-      await interaction.editReply({ content: phrases["error.user_exists"] });
+      await editText(phrases["error.user_exists"], Colors.Red);
       return;
     }
 
-    await interaction.editReply({ content: phrases.fetching_vrchat });
+    await editText(phrases.fetching_vrchat);
 
     const vrchatResponse = await VRCHAT_CLIENT.getUser({ path: { userId: sanitizedVRChatId } });
     const vrchatData = vrchatResponse.data as unknown as VRChatUser;
 
     if (!vrchatData.displayName) {
-      await interaction.editReply({
-        content: phrases["error.vrchat_not_found"].replace("{vrchat_id}", sanitizedVRChatId),
-      });
+      await editText(
+        phrases["error.vrchat_not_found"].replace("{vrchat_id}", sanitizedVRChatId),
+        Colors.Red,
+      );
       return;
     }
 
-    await interaction.editReply({ content: phrases.creating_profile });
+    await editText(phrases.creating_profile);
 
     await D1Class.createProfile(userRequestData, {
       vrchat_id: sanitizedVRChatId,
@@ -231,25 +239,26 @@ export async function run(interaction: ChatInputCommandInteraction): Promise<voi
 
     await applyServerSettings(interaction, userRequestData, discordUser.id, vrchatData.displayName);
 
-    const successEmbed = new EmbedBuilder()
-      .setColor(Colors.Green)
-      .setTitle(phrases["success.title"])
-      .setDescription(phrases["success.description"])
-      .addFields(
-        { name: phrases["success.field.discord"], value: `<@${discordUser.id}>`, inline: true },
-        {
-          name: phrases["success.field.vrchat"],
-          value: `[${vrchatData.displayName}](https://vrchat.com/home/user/${sanitizedVRChatId})`,
-          inline: true,
-        },
-        { name: phrases["success.field.vrchat_id"], value: `\`${sanitizedVRChatId}\``, inline: false },
-      )
-      .setThumbnail(vrchatData.profilePicOverride ?? vrchatData.currentAvatarImageUrl ?? null)
-      .setTimestamp();
+    const description =
+      `${phrases["success.description"]}\n\n` +
+      `**${phrases["success.field.discord"]}**: <@${discordUser.id}>\n` +
+      `**${phrases["success.field.vrchat"]}**: ` +
+      `[${vrchatData.displayName}](https://vrchat.com/home/user/${sanitizedVRChatId})\n` +
+      `**${phrases["success.field.vrchat_id"]}**: \`${sanitizedVRChatId}\``;
 
-    await interaction.editReply({ content: null, embeds: [successEmbed] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildContainer({
+          color: Colors.Green,
+          title: phrases["success.title"],
+          description,
+          thumbnail: vrchatData.profilePicOverride ?? vrchatData.currentAvatarImageUrl ?? undefined,
+        }),
+      ],
+    });
   } catch (error) {
     printMessage("staff user add error:", String(error));
-    await interaction.editReply({ content: phrases["error.general"] });
+    await editText(phrases["error.general"], Colors.Red);
   }
 }

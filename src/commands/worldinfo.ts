@@ -9,12 +9,11 @@
 // =========================================================================================================
 
 import {
-  ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   Colors,
-  EmbedBuilder,
   Locale,
+  MessageFlags,
   SlashCommandBuilder,
 } from "discord.js";
 import type { ChatInputCommandInteraction } from "discord.js";
@@ -23,6 +22,7 @@ import type { Command } from "./types.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { printMessage } from "../lib/logger.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
+import { buildContainer, textContainer } from "../ui/container.js";
 
 // =========================================================================================================
 // Constants
@@ -167,7 +167,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   const worldId = extractWorldId(interaction.options.getString("world", true));
 
   if (!worldId || !WORLD_ID_REGEX.test(worldId)) {
-    await interaction.editReply({ content: phrases["error.invalid_world"] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.invalid_world"], Colors.Red)],
+    });
     return;
   }
 
@@ -178,59 +181,41 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
     const worldResponse = await VRCHAT_CLIENT.getWorld({ path: { worldId } });
     const world = worldResponse.data as unknown as VRChatWorld;
 
-    const embed = new EmbedBuilder()
-      .setTitle(world.name)
-      .setDescription(world.description ?? "")
-      .setColor(Colors.Blue)
-      .setThumbnail(world.thumbnailImageUrl ?? world.imageUrl ?? null)
-      .addFields(
-        {
-          name: phrases["embed.author"],
-          value: `[${world.authorName}](https://vrchat.com/home/user/${world.authorId})`,
-          inline: true,
-        },
-        { name: phrases["embed.capacity"], value: world.capacity?.toString() ?? "N/A", inline: true },
-        { name: phrases["embed.occupants"], value: world.occupants?.toString() ?? "0", inline: true },
-        { name: phrases["embed.favorites"], value: world.favorites?.toString() ?? "0", inline: true },
-        { name: phrases["embed.visits"], value: world.visits?.toString() ?? "0", inline: true },
-      );
-
     const platformText = world.tags?.includes("android")
       ? phrases["platform.both"]
       : phrases["platform.pc"];
-    embed.addFields({ name: "🎮 Platform", value: platformText, inline: false });
+
+    // Fold the embed fields into the container body, one labelled line each.
+    const lines: string[] = [];
+    if (world.description) {
+      lines.push(world.description, "");
+    }
+    lines.push(
+      `**${phrases["embed.author"]}**: ` +
+        `[${world.authorName}](https://vrchat.com/home/user/${world.authorId})`,
+      `**${phrases["embed.capacity"]}**: ${world.capacity?.toString() ?? "N/A"}`,
+      `**${phrases["embed.occupants"]}**: ${world.occupants?.toString() ?? "0"}`,
+      `**${phrases["embed.favorites"]}**: ${world.favorites?.toString() ?? "0"}`,
+      `**${phrases["embed.visits"]}**: ${world.visits?.toString() ?? "0"}`,
+      `**🎮 Platform**: ${platformText}`,
+    );
 
     if (world.tags && world.tags.length > 0) {
       const relevantTags = world.tags
         .filter((tag) => !tag.startsWith("author_tag") && tag !== "android")
         .slice(0, MAX_TAGS);
-
       if (relevantTags.length > 0) {
-        embed.addFields({
-          name: phrases["embed.tags"],
-          value: relevantTags.map((tag) => `\`${tag}\``).join(", "),
-          inline: false,
-        });
+        lines.push(
+          `**${phrases["embed.tags"]}**: ${relevantTags.map((tag) => `\`${tag}\``).join(", ")}`,
+        );
       }
     }
 
     if (world.created_at) {
-      embed.addFields({
-        name: phrases["embed.created"],
-        value: `<t:${toUnixSeconds(world.created_at)}:D>`,
-        inline: true,
-      });
+      lines.push(`**${phrases["embed.created"]}**: <t:${toUnixSeconds(world.created_at)}:D>`);
     }
     if (world.updated_at) {
-      embed.addFields({
-        name: phrases["embed.updated"],
-        value: `<t:${toUnixSeconds(world.updated_at)}:R>`,
-        inline: true,
-      });
-    }
-
-    if (world.imageUrl) {
-      embed.setImage(world.imageUrl);
+      lines.push(`**${phrases["embed.updated"]}**: <t:${toUnixSeconds(world.updated_at)}:R>`);
     }
 
     const openButton = new ButtonBuilder()
@@ -244,8 +229,17 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
       .setURL(`https://vrchat.com/home/user/${world.authorId}`);
 
     await interaction.editReply({
-      embeds: [embed],
-      components: [new ActionRowBuilder<ButtonBuilder>().addComponents(openButton, authorButton)],
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        buildContainer({
+          color: Colors.Blue,
+          title: world.name,
+          description: lines.join("\n"),
+          thumbnail: world.thumbnailImageUrl ?? world.imageUrl ?? undefined,
+          image: world.imageUrl ?? undefined,
+          buttons: [openButton, authorButton],
+        }),
+      ],
     });
   } catch (error) {
     printMessage("Error fetching world info:", String(error));
@@ -253,7 +247,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
     const status = (error as VRChatApiError).response?.status;
     const content = status === HTTP_NOT_FOUND ? phrases["error.not_found"] : phrases["error.api_error"];
 
-    await interaction.editReply({ content });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(content, Colors.Red)],
+    });
   }
 }
 

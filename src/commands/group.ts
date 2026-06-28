@@ -11,20 +11,26 @@
 
 import {
   Colors,
-  EmbedBuilder,
   Locale,
+  MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import type { AutocompleteInteraction, ChatInputCommandInteraction } from "discord.js";
+import type {
+  AutocompleteInteraction,
+  ChatInputCommandInteraction,
+  TextBasedChannel,
+} from "discord.js";
 
 import permissions from "../data/permissions.json" with { type: "json" };
 import type { Command } from "./types.js";
+import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { printMessage } from "../lib/logger.js";
 import { D1Class } from "../services/d1.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
 import type { BotClient } from "../types/client.js";
+import { buildContainer, textContainer } from "../ui/container.js";
 
 // =========================================================================================================
 // Constants
@@ -58,10 +64,17 @@ const localize = createLocalizer({
     "error.no_permission":
       "The bot does not have the necessary permissions to perform this action in the VRChat group.",
     "error.user_not_found": 'The user "{username}" was not found on VRChat.',
+    "error.target_not_linked":
+      "{username} has not linked a VRChat account yet, so they cannot be invited or kicked.",
     "error.invite_failed": "Failed to invite the user to the group.",
     "error.kick_failed": "Failed to kick the user from the group.",
     "success.invite": "✅ Successfully invited **{username}** to the group **{groupName}**.",
     "success.kick": "✅ Successfully kicked **{username}** from the group **{groupName}**.",
+    "log.invite.title": "User invited to {groupName}",
+    "log.kick.title": "User kicked from {groupName}",
+    "log.action.body":
+      "**User**: {target} (`{vrchat_name}`)\n**Group**: {vrchat_group_id}\n**Action ID**: {action_id}",
+    "log.action.by": "Action made by {user}",
     "error.leave_failed": "Failed to leave the group.",
     "success.leave":
       "✅ The bot has left the group **{groupName}** and all its data has been removed from this server.",
@@ -81,10 +94,17 @@ const localize = createLocalizer({
     "error.no_permission":
       "El bot no tiene los permisos necesarios para realizar esta acción en el grupo de VRChat.",
     "error.user_not_found": 'El usuario "{username}" no fue encontrado en VRChat.',
+    "error.target_not_linked":
+      "{username} todavía no ha vinculado una cuenta de VRChat, así que no se le puede invitar ni expulsar.",
     "error.invite_failed": "No se pudo invitar al usuario al grupo.",
     "error.kick_failed": "No se pudo expulsar al usuario del grupo.",
     "success.invite": "✅ Se invitó exitosamente a **{username}** al grupo **{groupName}**.",
     "success.kick": "✅ Se expulsó exitosamente a **{username}** del grupo **{groupName}**.",
+    "log.invite.title": "Usuario invitado a {groupName}",
+    "log.kick.title": "Usuario expulsado de {groupName}",
+    "log.action.body":
+      "**Usuario**: {target} (`{vrchat_name}`)\n**Grupo**: {vrchat_group_id}\n**ID de la acción**: {action_id}",
+    "log.action.by": "Acción realizada por {user}",
     "error.leave_failed": "No se pudo abandonar el grupo.",
     "success.leave":
       "✅ El bot abandonó el grupo **{groupName}** y se eliminó toda su información de este servidor.",
@@ -105,11 +125,18 @@ const localize = createLocalizer({
     "error.no_permission":
       "¡Nanay! El bot no tiene los permisos necesarios para hacer esto en el grupo de VRChat.",
     "error.user_not_found": 'El usuario "{username}" no se encuentra en VRChat, macho.',
+    "error.target_not_linked":
+      "{username} aún no ha vinculado cuenta de VRChat, así que no se le puede invitar ni echar, colega.",
     "error.invite_failed": "¡Joder! No se ha podido invitar al usuario al grupo.",
     "error.kick_failed": "¡Me cago en diez! No se ha podido expulsar al usuario del grupo.",
     "success.invite":
       "✅ ¡De lujo! Se ha invitado a **{username}** al grupo **{groupName}**, como Dios manda.",
     "success.kick": "✅ ¡Hecho! Se ha expulsado a **{username}** del grupo **{groupName}**, tronco.",
+    "log.invite.title": "Usuario invitado a {groupName}",
+    "log.kick.title": "Usuario expulsado de {groupName}",
+    "log.action.body":
+      "**Usuario**: {target} (`{vrchat_name}`)\n**Grupo**: {vrchat_group_id}\n**ID de la acción**: {action_id}",
+    "log.action.by": "Acción realizada por {user}",
     "error.leave_failed": "¡Joder! No se ha podido abandonar el grupo.",
     "success.leave":
       "✅ ¡Hala! El bot se ha pirado del grupo **{groupName}** y se ha borrado toda su info de este server.",
@@ -127,11 +154,6 @@ const localize = createLocalizer({
 // =========================================================================================================
 
 type Phrases = ReturnType<typeof localize>;
-
-interface ResolvedUser {
-  id: string;
-  displayName: string;
-}
 
 /** Subset of the VRChat group object this command reads. */
 interface VRChatGroupData {
@@ -156,24 +178,6 @@ async function isGroupLinked(
   } catch {
     return false;
   }
-}
-
-/** Resolves a VRChat username or user ID into an id + display name, throwing when not found. */
-async function resolveUser(userInput: string): Promise<ResolvedUser> {
-  if (userInput.startsWith("usr_")) {
-    const response = await VRCHAT_CLIENT.getUser({ path: { userId: userInput } });
-    const user = response.data as unknown as ResolvedUser;
-    return { id: user.id, displayName: user.displayName };
-  }
-
-  const search = await VRCHAT_CLIENT.searchUsers({ query: { search: userInput, n: 1 } });
-  const results = search.data as unknown as ResolvedUser[] | undefined;
-  if (!results || results.length === 0) {
-    throw new Error("User not found");
-  }
-
-  const first = results[0]!;
-  return { id: first.id, displayName: first.displayName };
 }
 
 // =========================================================================================================
@@ -253,7 +257,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   const phrases = localize(interaction.locale);
 
   if (!interaction.guild) {
-    await interaction.editReply({ content: phrases["error.general"] });
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.general"], Colors.Red)],
+    });
     return;
   }
 
@@ -275,14 +282,21 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
     if (!profileData?.vrchat_id) {
       await interaction.editReply({
-        content: phrases["error.not_linked"],
+        flags: MessageFlags.IsComponentsV2,
+        components: [textContainer(phrases["error.not_linked"], Colors.Red)],
       });
       return;
     }
 
     if (!(await isGroupLinked(groupId, serverId, userRequestData))) {
       await interaction.editReply({
-        content: phrases["error.group_not_linked"].replace("{groupId}", groupId),
+        flags: MessageFlags.IsComponentsV2,
+        components: [
+          textContainer(
+            phrases["error.group_not_linked"].replace("{groupId}", groupId),
+            Colors.Red,
+          ),
+        ],
       });
       return;
     }
@@ -292,10 +306,10 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
     switch (subcommand) {
       case SUBCOMMAND.INVITE:
-        await runMembership(interaction, phrases, groupData, groupId, "invite");
+        await runMembership(interaction, phrases, groupData, groupId, "invite", userRequestData);
         break;
       case SUBCOMMAND.KICK:
-        await runMembership(interaction, phrases, groupData, groupId, "kick");
+        await runMembership(interaction, phrases, groupData, groupId, "kick", userRequestData);
         break;
       case SUBCOMMAND.VIEWPERMISSIONS:
         await runViewPermissions(interaction, phrases, groupData, groupId);
@@ -309,8 +323,74 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   } catch (error) {
     printMessage("Group command error:", String(error));
     await interaction.editReply({
-      content: phrases["error.general"],
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.general"], Colors.Red)],
     });
+  }
+}
+
+/**
+ * Records an invite/kick in the persistent action log (D1) and posts it to the server's configured
+ * Discord log channel. Logging is best-effort: a failure here must not fail the action the user already
+ * performed, so errors are logged to the console and swallowed.
+ */
+async function logGroupAction(
+  interaction: ChatInputCommandInteraction,
+  phrases: Phrases,
+  userRequestData: { discord_id: string; discord_name: string },
+  action: "invite" | "kick",
+  groupId: string,
+  groupName: string,
+  target: { discordId: string; vrchatName: string },
+): Promise<void> {
+  if (!interaction.guild) {
+    return;
+  }
+  const guild = interaction.guild;
+
+  try {
+    const actionDescription =
+      action === "invite"
+        ? `Invited ${target.vrchatName} to group ${groupName}`
+        : `Kicked ${target.vrchatName} from group ${groupName}`;
+
+    // Persist the action in D1, which returns the action's log id.
+    const logResponse = await D1Class.logVRChatGroup(
+      userRequestData,
+      groupId,
+      guild.id,
+      actionDescription,
+    );
+
+    const logChannelId = await D1Class.getDiscordSetting(
+      userRequestData,
+      guild.id,
+      DISCORD_SERVER_SETTINGS.LOG_CHANNEL,
+    );
+    const logChannel = logChannelId ? guild.channels.cache.get(logChannelId) : undefined;
+    if (!logChannel?.isTextBased()) {
+      printMessage(`[group] no usable log channel for guild ${guild.id}; action logged in D1 only`);
+      return;
+    }
+
+    const titleKey = action === "invite" ? "log.invite.title" : "log.kick.title";
+    const container = buildContainer({
+      color: action === "invite" ? Colors.Green : Colors.Red,
+      title: phrases[titleKey].replace("{groupName}", groupName),
+      description: phrases["log.action.body"]
+        .replace("{target}", `<@${target.discordId}>`)
+        .replace("{vrchat_name}", target.vrchatName)
+        .replace("{vrchat_group_id}", groupId)
+        .replace("{action_id}", String(logResponse.data.log_id)),
+      footer: phrases["log.action.by"].replace("{user}", interaction.user.username),
+    });
+
+    await (logChannel as TextBasedChannel & { send: (o: unknown) => Promise<unknown> }).send({
+      flags: MessageFlags.IsComponentsV2,
+      components: [container],
+    });
+  } catch (error) {
+    printMessage(`[group] failed to log ${action} action:`, String(error));
   }
 }
 
@@ -321,48 +401,74 @@ async function runMembership(
   groupData: VRChatGroupData,
   groupId: string,
   action: "invite" | "kick",
+  userRequestData: { discord_id: string; discord_name: string },
 ): Promise<void> {
   const requiredPermission = action === "invite" ? PERMISSION.INVITE : PERMISSION.KICK;
   if (!groupData.myMember.permissions.includes(requiredPermission)) {
     await interaction.editReply({
-      content: phrases["error.no_permission"],
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.no_permission"], Colors.Red)],
     });
     return;
   }
 
-  const userInput = interaction.options.getUser("user", true).id;
+  // The "user" option is a Discord user; resolve their linked VRChat id from our profile store rather
+  // than treating the Discord id as a VRChat id (which previously made the lookup fail).
+  const targetDiscordUser = interaction.options.getUser("user", true);
+
+  let targetProfile;
+  try {
+    targetProfile = await D1Class.getProfile(userRequestData, targetDiscordUser.id);
+  } catch {
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        textContainer(
+          phrases["error.target_not_linked"].replace("{username}", `<@${targetDiscordUser.id}>`),
+          Colors.Red,
+        ),
+      ],
+    });
+    return;
+  }
 
   try {
-    const targetUser = await resolveUser(userInput);
-
     if (action === "invite") {
       // Bug fix: the SDK method is createGroupInvite (the original used a non-existent name).
       await VRCHAT_CLIENT.createGroupInvite({
         path: { groupId },
-        body: { userId: targetUser.id },
+        body: { userId: targetProfile.vrchat_id },
       });
     } else {
       // Bug fix: the SDK method is kickGroupMember (the original used a non-existent name).
-      await VRCHAT_CLIENT.kickGroupMember({ path: { groupId, userId: targetUser.id } });
+      await VRCHAT_CLIENT.kickGroupMember({
+        path: { groupId, userId: targetProfile.vrchat_id },
+      });
     }
+
+    await logGroupAction(interaction, phrases, userRequestData, action, groupId, groupData.name, {
+      discordId: targetDiscordUser.id,
+      vrchatName: targetProfile.vrchat_name,
+    });
 
     const successKey = action === "invite" ? "success.invite" : "success.kick";
     await interaction.editReply({
-      content: phrases[successKey]
-        .replace("{username}", targetUser.displayName)
-        .replace("{groupName}", groupData.name),
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        textContainer(
+          phrases[successKey]
+            .replace("{username}", targetProfile.vrchat_name)
+            .replace("{groupName}", groupData.name),
+          Colors.Green,
+        ),
+      ],
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "User not found") {
-      await interaction.editReply({
-        content: phrases["error.user_not_found"].replace("{username}", userInput),
-      });
-      return;
-    }
     printMessage(`Error during group ${action}:`, String(error));
     const failKey = action === "invite" ? "error.invite_failed" : "error.kick_failed";
     await interaction.editReply({
-      content: phrases[failKey],
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases[failKey], Colors.Red)],
     });
   }
 }
@@ -388,19 +494,18 @@ async function runViewPermissions(
     `${phrases["permissions.missing"]}\n` +
     `${missing.length > 0 ? missing.join("\n") : phrases["permissions.none"]}`;
 
-  const guildIcon = interaction.guild?.iconURL() ?? undefined;
-  const embed = new EmbedBuilder()
-    .setColor(Colors.Blue)
-    .setTitle(phrases["permissions.title"].replace("{groupName}", groupData.name))
-    .setDescription(description)
-    .setTimestamp()
-    .setFooter(guildIcon ? { text: `Group ID: ${groupId}`, iconURL: guildIcon } : { text: `Group ID: ${groupId}` });
-
-  if (groupData.iconUrl) {
-    embed.setThumbnail(groupData.iconUrl);
-  }
-
-  await interaction.editReply({ embeds: [embed] });
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [
+      buildContainer({
+        color: Colors.Blue,
+        title: phrases["permissions.title"].replace("{groupName}", groupData.name),
+        description,
+        thumbnail: groupData.iconUrl ?? undefined,
+        footer: `Group ID: ${groupId}`,
+      }),
+    ],
+  });
 }
 
 /**
@@ -442,12 +547,16 @@ async function runLeave(
     }
 
     await interaction.editReply({
-      content: phrases["success.leave"].replace("{groupName}", groupData.name),
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        textContainer(phrases["success.leave"].replace("{groupName}", groupData.name), Colors.Green),
+      ],
     });
   } catch (error) {
     printMessage("Error during group leave:", String(error));
     await interaction.editReply({
-      content: phrases["error.leave_failed"],
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.leave_failed"], Colors.Red)],
     });
   }
 }
