@@ -47,7 +47,7 @@ const REQUIRED_PERMISSIONS =
 
 const SCOPE_URL = new URLSearchParams({
   client_id: env.DISCORD_CLIENT_ID,
-  scope: "bot+applications.commands",
+  scope: "bot applications.commands",
   permissions: REQUIRED_PERMISSIONS.toString(),
 });
 
