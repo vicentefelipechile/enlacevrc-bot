@@ -10,7 +10,7 @@
 // Imports
 // =========================================================================================================
 
-import { REST, Routes } from "discord.js";
+import { DiscordAPIError, REST, RESTJSONErrorCodes, Routes } from "discord.js";
 import type { RESTPostAPIApplicationCommandsJSONBody } from "discord.js";
 
 import { allCommands } from "../src/commands/index.js";
@@ -18,6 +18,36 @@ import { env } from "../src/config/env.js";
 import { D1Class } from "../src/services/d1.js";
 import { printMessage } from "../src/lib/logger.js";
 import type { UserRequestData } from "../src/types/models.js";
+
+// =========================================================================================================
+// Helpers
+// =========================================================================================================
+
+// Maps the Discord API error codes seen when registering guild commands to an actionable explanation,
+// so a failed deploy says *why* it failed and *how* to fix it instead of a bare "Missing Access".
+function describeDeployError(error: unknown): string {
+  if (!(error instanceof DiscordAPIError)) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  switch (error.code) {
+    case RESTJSONErrorCodes.MissingAccess:
+      return (
+        "Missing Access — the bot is in this server but was invited without the " +
+        "'applications.commands' scope (or has since lost it). Re-invite/re-authorize it with a URL " +
+        "that includes 'scope=bot applications.commands' (use the /invite link), then deploy again."
+      );
+    case RESTJSONErrorCodes.UnknownGuild:
+      return (
+        "Unknown Guild — the bot is no longer in this server, but it is still registered in D1. " +
+        "Remove the stale server from the database (or re-invite the bot)."
+      );
+    case RESTJSONErrorCodes.MissingPermissions:
+      return "Missing Permissions — the bot lacks the permissions required to register commands here.";
+    default:
+      return `${error.message} (code ${error.code})`;
+  }
+}
 
 // =========================================================================================================
 // Main
@@ -61,9 +91,9 @@ async function deployCommands(): Promise<void> {
       );
       printMessage(`Registered commands in server: ${server.discord_server_name}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       printMessage(
-        `[ERROR] Could not register commands in ${server.discord_server_name}: ${message}`,
+        `[ERROR] Could not register commands in ${server.discord_server_name} ` +
+          `(${server.discord_server_id}): ${describeDeployError(error)}`,
       );
     }
   }
