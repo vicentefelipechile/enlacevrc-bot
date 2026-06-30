@@ -26,19 +26,19 @@
     <!-- Third-party visual libs (pinned versions, served from CDN). -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox@3.3.0/dist/css/glightbox.min.css" />
-    <link rel="stylesheet" href="css/styles.css?v=8" />
+    <link rel="stylesheet" href="css/styles.css?v=9" />
   </head>
   <body>
     <!-- Animated film grain overlay (drawn by effects.js; hidden if reduced motion). -->
     <canvas id="grain" aria-hidden="true"></canvas>
 
-    <a class="skip-link" href="#main">Saltar al contenido</a>
+    <a class="skip-link" href="#main" data-i18n="a11y.skip">Saltar al contenido</a>
 
     <!-- ============================================================================================== -->
     <!-- Top bar -->
     <!-- ============================================================================================== -->
     <header class="topbar">
-      <button id="menu-toggle" class="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+      <button id="menu-toggle" class="menu-toggle" aria-label="Abrir menú" data-i18n-aria="a11y.menu" aria-expanded="false" aria-controls="sidebar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
         </svg>
@@ -48,69 +48,85 @@
         <span class="topbar__mark" aria-hidden="true">VR</span>
         <span>EnlaceVRC</span>
       </a>
-      <span class="topbar__tag">Documentación</span>
+      <span class="topbar__tag" data-i18n="nav.tag">Documentación</span>
 
       <span class="topbar__spacer"></span>
 
-      <nav class="topbar__links" aria-label="Enlaces externos">
-        <a class="topbar__link" href="#verificacion">Verificación</a>
-        <a class="topbar__link" href="#comandos">Comandos</a>
+      <nav class="topbar__links" aria-label="Enlaces">
+        <a class="topbar__link" href="#verificacion" data-i18n="nav.verification">Verificación</a>
+        <a class="topbar__link" href="#comandos" data-i18n="nav.commands">Comandos</a>
         <a class="topbar__link" href="https://github.com/vicentefelipechile/enlacevrc-bot">GitHub</a>
       </nav>
+
+      <div class="topbar__controls">
+        <label class="fx-toggle" data-i18n-title="ctrl.effects_title" title="Activa o desactiva animaciones y efectos">
+          <input id="fx-toggle" type="checkbox" checked />
+          <span data-i18n="ctrl.effects">Efectos</span>
+        </label>
+        <label class="lang-select">
+          <span class="sr-only" data-i18n="ctrl.language">Idioma</span>
+          <select id="lang-select" aria-label="Idioma">
+            <option value="es">Español</option>
+            <option value="en">English</option>
+            <option value="pt">Português</option>
+            <option value="fr">Français</option>
+          </select>
+        </label>
+      </div>
     </header>
 
     <div class="shell">
       <!-- ============================================================================================ -->
       <!-- Sidebar (wiki navigation) -->
       <!-- ============================================================================================ -->
-      <aside id="sidebar" class="sidebar" aria-label="Navegación de la documentación">
+      <aside id="sidebar" class="sidebar" aria-label="Navegación">
         <div class="sidebar__search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <input id="sidebar-filter" type="search" placeholder="Buscar en la guía…" aria-label="Buscar en la guía" autocomplete="off" />
+          <input id="sidebar-filter" type="search" placeholder="Buscar en la guía…" data-i18n-placeholder="side.search" aria-label="Buscar en la guía" autocomplete="off" />
         </div>
 
-        <div id="sidebar-empty" class="sidebar__empty" hidden>Sin resultados.</div>
+        <div id="sidebar-empty" class="sidebar__empty" data-i18n="side.empty" hidden>Sin resultados.</div>
 
         <div class="sidebar__group">
-          <p class="sidebar__title">Empezar</p>
+          <p class="sidebar__title" data-i18n="side.start">Empezar</p>
           <nav class="sidebar__nav">
             <a class="sidebar__link" href="#que-es">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              <span class="sidebar__label">Qué es EnlaceVRC</span>
+              <span class="sidebar__label" data-i18n="side.what">Qué es EnlaceVRC</span>
             </a>
             <a class="sidebar__link" href="#como-funciona">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
-              <span class="sidebar__label">Cómo funciona</span>
+              <span class="sidebar__label" data-i18n="side.how">Cómo funciona</span>
             </a>
             <a class="sidebar__link" href="#agregar-bot">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-              <span class="sidebar__label">Agregar el bot</span>
+              <span class="sidebar__label" data-i18n="side.add">Agregar el bot</span>
             </a>
           </nav>
         </div>
 
         <div class="sidebar__group">
-          <p class="sidebar__title">Verificación</p>
+          <p class="sidebar__title" data-i18n="side.verification">Verificación</p>
           <nav class="sidebar__nav">
             <a class="sidebar__link" href="#verificacion">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-              <span class="sidebar__label">Verificar tu cuenta</span>
+              <span class="sidebar__label" data-i18n="side.verify_account">Verificar tu cuenta</span>
             </a>
             <a class="sidebar__link" href="#verificacion-18">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span class="sidebar__label">Verificación +18</span>
+              <span class="sidebar__label" data-i18n="side.verify_18">Verificación +18</span>
             </a>
             <a class="sidebar__link" href="#verificacion-global">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
-              <span class="sidebar__label">Verificación global</span>
+              <span class="sidebar__label" data-i18n="side.verify_global">Verificación global</span>
             </a>
           </nav>
         </div>
 
         <div class="sidebar__group">
-          <p class="sidebar__title">Comandos de usuario</p>
+          <p class="sidebar__title" data-i18n="side.user_cmds">Comandos de usuario</p>
           <nav class="sidebar__nav">
             <a class="sidebar__link" href="#cmd-verification"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><span class="sidebar__label"><code>/verification</code></span></a>
             <a class="sidebar__link" href="#cmd-howtoverify"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg><span class="sidebar__label"><code>/howtoverify</code></span></a>
@@ -125,7 +141,7 @@
         </div>
 
         <div class="sidebar__group">
-          <p class="sidebar__title">Administración del servidor</p>
+          <p class="sidebar__title" data-i18n="side.admin">Administración del servidor</p>
           <nav class="sidebar__nav">
             <a class="sidebar__link" href="#cmd-settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span class="sidebar__label"><code>/settings</code></span></a>
             <a class="sidebar__link" href="#cmd-group"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span class="sidebar__label"><code>/group</code></span></a>
@@ -134,17 +150,17 @@
         </div>
 
         <div class="sidebar__group">
-          <p class="sidebar__title">Staff</p>
+          <p class="sidebar__title" data-i18n="side.staff">Staff</p>
           <nav class="sidebar__nav">
             <a class="sidebar__link" href="#cmd-staff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.3 7.2 16.9l.9-5.4L4.2 7.7l5.4-.8z"/></svg><span class="sidebar__label"><code>/staff</code></span></a>
           </nav>
         </div>
 
         <div class="sidebar__group">
-          <p class="sidebar__title">Referencia</p>
+          <p class="sidebar__title" data-i18n="side.reference">Referencia</p>
           <nav class="sidebar__nav">
-            <a class="sidebar__link" href="#tabla-comandos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg><span class="sidebar__label">Tabla de comandos</span></a>
-            <a class="sidebar__link" href="#privacidad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span class="sidebar__label">Privacidad y datos</span></a>
+            <a class="sidebar__link" href="#tabla-comandos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg><span class="sidebar__label" data-i18n="side.table">Tabla de comandos</span></a>
+            <a class="sidebar__link" href="#privacidad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span class="sidebar__label" data-i18n="side.privacy">Privacidad y datos</span></a>
           </nav>
         </div>
       </aside>
@@ -166,19 +182,19 @@
                 <div class="badge-row">
                   <span class="badge">VRChat</span>
                   <span class="badge">Discord</span>
-                  <span class="badge badge--red">Verificación global</span>
+                  <span class="badge badge--red" data-i18n="hero.badge">Verificación global</span>
                 </div>
                 <h1>EnlaceVRC</h1>
               </div>
             </div>
-            <p class="hero__sub">
+            <p class="hero__sub" data-i18n="hero.sub">
               Un bot de Discord que vincula y verifica cuentas de VRChat. El usuario demuestra que es
               dueño de su cuenta colocando un código en su biografía de VRChat — sin contraseñas y sin
               OAuth de terceros.
             </p>
             <div class="hero__actions">
-              <a class="btn btn--primary" href="#verificacion">Cómo verificarte</a>
-              <a class="btn btn--ghost" href="#comandos">Ver todos los comandos</a>
+              <a class="btn btn--primary" href="#verificacion" data-i18n="hero.cta_verify">Cómo verificarte</a>
+              <a class="btn btn--ghost" href="#comandos" data-i18n="hero.cta_commands">Ver todos los comandos</a>
             </div>
           </section>
 
@@ -186,46 +202,46 @@
           <!-- How it works -->
           <!-- ---------------------------------------------------------------------------------------- -->
           <section class="section" id="como-funciona">
-            <p class="section__eyebrow">Visión general</p>
-            <h2 class="h-icon"><img src="img/page3.jpg" alt="" width="44" height="44" />Cómo funciona</h2>
-            <p class="lead">
+            <p class="section__eyebrow" data-i18n="how.eyebrow">Visión general</p>
+            <h2 class="h-icon"><img src="img/page3.jpg" alt="" width="44" height="44" /><span data-i18n="how.title">Cómo funciona</span></h2>
+            <p class="lead" data-i18n="how.lead">
               EnlaceVRC conecta tu identidad de VRChat con tu cuenta de Discord y mantiene roles, apodos
               y la pertenencia a grupos de VRChat sincronizados desde el servidor.
             </p>
 
             <div class="grid-2">
               <div class="feature">
-                <h3>Prueba de propiedad por biografía</h3>
-                <p>
+                <h3 data-i18n="how.f1.title">Prueba de propiedad por biografía</h3>
+                <p data-i18n="how.f1.body">
                   El bot genera un código único, tú lo pegas en tu biografía de VRChat y el bot lo lee
                   para confirmar que la cuenta es tuya. Nunca pide tu contraseña de VRChat.
                 </p>
               </div>
               <div class="feature">
-                <h3>Verificación global</h3>
-                <p>
+                <h3 data-i18n="how.f2.title">Verificación global</h3>
+                <p data-i18n="how.f2.body">
                   Una vez verificado, tu vínculo vale en <strong>todos</strong> los servidores que usan
                   el bot. No tienes que repetir el proceso en cada comunidad.
                 </p>
               </div>
               <div class="feature">
-                <h3>Roles y apodo automáticos</h3>
-                <p>
+                <h3 data-i18n="how.f3.title">Roles y apodo automáticos</h3>
+                <p data-i18n="how.f3.body">
                   Al verificar, el servidor puede asignarte un rol de verificado y cambiar tu apodo por
                   tu nombre de VRChat, según lo que configure el administrador.
                 </p>
               </div>
               <div class="feature">
-                <h3>Gestión de grupos de VRChat</h3>
-                <p>
+                <h3 data-i18n="how.f4.title">Gestión de grupos de VRChat</h3>
+                <p data-i18n="how.f4.body">
                   Los administradores pueden invitar y expulsar miembros de un grupo de VRChat vinculado
                   directamente desde Discord, sin salir de la app.
                 </p>
               </div>
             </div>
 
-            <h3 id="agregar-bot">Agregar el bot a tu servidor</h3>
-            <p>
+            <h3 id="agregar-bot" data-i18n="how.add.title">Agregar el bot a tu servidor</h3>
+            <p data-i18n="how.add.body">
               Usa el comando <code>/invite</code> dentro de cualquier servidor donde ya esté el bot para
               obtener el enlace de invitación, o pídele el enlace a quien lo administre. El bot necesita
               el permiso <strong>Gestionar roles</strong> y que su rol esté por encima del rol de
@@ -233,7 +249,7 @@
             </p>
             <div class="note note--accent">
               <img src="img/warning.jpg" alt="" width="34" height="34" />
-              <p>
+              <p data-i18n="how.add.note">
                 Si el bot no puede asignar el rol, casi siempre es porque su rol está por debajo del rol
                 de verificado en la lista de roles del servidor. Arrástralo más arriba en
                 <em>Ajustes del servidor → Roles</em>.
@@ -245,36 +261,36 @@
           <!-- Verification flow -->
           <!-- ---------------------------------------------------------------------------------------- -->
           <section class="section" id="verificacion">
-            <p class="section__eyebrow">Guía paso a paso</p>
-            <h2 class="h-icon"><img src="img/success.jpg" alt="" width="44" height="44" />Verificar tu cuenta</h2>
-            <p class="lead">
+            <p class="section__eyebrow" data-i18n="verify.eyebrow">Guía paso a paso</p>
+            <h2 class="h-icon"><img src="img/success.jpg" alt="" width="44" height="44" /><span data-i18n="verify.title">Verificar tu cuenta</span></h2>
+            <p class="lead" data-i18n="verify.lead">
               El flujo de verificación demora un par de minutos. Puedes empezar con la URL de tu perfil,
               tu nombre de usuario, o sin nada para ver el video tutorial.
             </p>
 
             <ol class="steps">
               <li>
-                <strong>Ejecuta <code>/verification</code></strong>
-                <p>
+                <strong data-i18n="verify.s1.title">Ejecuta <code>/verification</code></strong>
+                <p data-i18n="verify.s1.body">
                   Pega la URL de tu perfil en la opción <code>vrchat</code>, o escribe tu nombre en
                   <code>username</code>. Si usas el nombre, el bot te mostrará hasta 3 perfiles
                   candidatos para que confirmes cuál es el tuyo.
                 </p>
               </li>
               <li>
-                <strong>Copia el código</strong>
-                <p>El bot responde con un código de verificación de un solo uso. Cópialo tal cual.</p>
+                <strong data-i18n="verify.s2.title">Copia el código</strong>
+                <p data-i18n="verify.s2.body">El bot responde con un código de verificación de un solo uso. Cópialo tal cual.</p>
               </li>
               <li>
-                <strong>Pégalo en tu biografía de VRChat</strong>
-                <p>
+                <strong data-i18n="verify.s3.title">Pégalo en tu biografía de VRChat</strong>
+                <p data-i18n="verify.s3.body">
                   Abre tu perfil en VRChat y pega el código en cualquier parte de tu biografía. Usa el
                   botón <em>Ir a VRChat</em> del mensaje para abrir el sitio directamente.
                 </p>
               </li>
               <li>
-                <strong>Presiona «Verificar»</strong>
-                <p>
+                <strong data-i18n="verify.s4.title">Presiona «Verificar»</strong>
+                <p data-i18n="verify.s4.body">
                   El bot lee tu biografía, confirma el código y vincula tu cuenta. El código expira a
                   los <strong>5 minutos</strong>; si se vence, vuelve a ejecutar el comando.
                 </p>
@@ -283,21 +299,21 @@
 
             <div class="note">
               <img src="img/page7.jpg" alt="" width="34" height="34" />
-              <p>
+              <p data-i18n="verify.note">
                 ¿No te aparece el código en la biografía? Asegúrate de haberlo guardado en VRChat antes
                 de presionar «Verificar», y de que esté escrito exactamente igual.
               </p>
             </div>
 
-            <h3 id="verificacion-18">Verificación +18 automática</h3>
-            <p>
+            <h3 id="verificacion-18" data-i18n="verify.v18.title">Verificación +18 automática</h3>
+            <p data-i18n="verify.v18.body">
               Si tu edad ya está verificada en VRChat (<em>age verified</em>), el bot te otorga
               automáticamente la <strong>verificación +18</strong> al vincularte y, si el servidor lo
               configuró, te asigna el rol +18 correspondiente. No necesitas un trámite aparte.
             </p>
 
-            <h3 id="verificacion-global">Qué significa «verificación global»</h3>
-            <p>
+            <h3 id="verificacion-global" data-i18n="verify.global.title">Qué significa «verificación global»</h3>
+            <p data-i18n="verify.global.body">
               Tu vínculo entre Discord y VRChat se guarda una sola vez y se reconoce en cualquier
               servidor que ejecute EnlaceVRC. Si entras a otra comunidad con el bot, ya cuentas como
               verificado. Para deshacer el vínculo, ejecuta <code>/verification</code> de nuevo y usa el
@@ -309,9 +325,9 @@
           <!-- Commands -->
           <!-- ---------------------------------------------------------------------------------------- -->
           <section class="section" id="comandos">
-            <p class="section__eyebrow">Referencia</p>
-            <h2 class="h-icon"><img src="img/page6.jpg" alt="" width="44" height="44" />Comandos</h2>
-            <p class="lead">
+            <p class="section__eyebrow" data-i18n="cmds.eyebrow">Referencia</p>
+            <h2 class="h-icon"><img src="img/page6.jpg" alt="" width="44" height="44" /><span data-i18n="cmds.title">Comandos</span></h2>
+            <p class="lead" data-i18n="cmds.lead">
               Todos los comandos están disponibles en inglés y español (Latinoamérica y España). Los
               comandos de administración requieren permisos en el servidor.
             </p>
@@ -320,13 +336,13 @@
             <article class="cmd" id="cmd-verification">
               <div class="cmd__head">
                 <span class="cmd__name">/verification</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Vincula tu cuenta de Discord con tu perfil de VRChat, o la desvincula si ya estás verificado.</p>
+                <p data-i18n="cmd.verification.desc">Vincula tu cuenta de Discord con tu perfil de VRChat, o la desvincula si ya estás verificado.</p>
                 <ul class="cmd__opts">
-                  <li><code>vrchat</code><span>URL de tu perfil de VRChat. Opcional.</span></li>
-                  <li><code>username</code><span>Tu nombre de usuario de VRChat, como alternativa a la URL. Opcional.</span></li>
+                  <li><code>vrchat</code><span data-i18n="cmd.verification.opt.vrchat">URL de tu perfil de VRChat. Opcional.</span></li>
+                  <li><code>username</code><span data-i18n="cmd.verification.opt.username">Tu nombre de usuario de VRChat, como alternativa a la URL. Opcional.</span></li>
                 </ul>
               </div>
             </article>
@@ -335,10 +351,10 @@
             <article class="cmd" id="cmd-howtoverify">
               <div class="cmd__head">
                 <span class="cmd__name">/howtoverify</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Muestra un video tutorial corto explicando cómo verificar tu cuenta de VRChat con Discord.</p>
+                <p data-i18n="cmd.howtoverify.desc">Muestra un video tutorial corto explicando cómo verificar tu cuenta de VRChat con Discord.</p>
               </div>
             </article>
 
@@ -346,10 +362,10 @@
             <article class="cmd" id="cmd-profile">
               <div class="cmd__head">
                 <span class="cmd__name">/profile</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Muestra tu propio perfil de VRChat vinculado.</p>
+                <p data-i18n="cmd.profile.desc">Muestra tu propio perfil de VRChat vinculado.</p>
               </div>
             </article>
 
@@ -357,12 +373,12 @@
             <article class="cmd" id="cmd-viewprofile">
               <div class="cmd__head">
                 <span class="cmd__name">/viewprofile</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Muestra el perfil de VRChat de otro usuario del servidor.</p>
+                <p data-i18n="cmd.viewprofile.desc">Muestra el perfil de VRChat de otro usuario del servidor.</p>
                 <ul class="cmd__opts">
-                  <li><code>user</code><span>El usuario de Discord cuyo perfil quieres ver.</span></li>
+                  <li><code>user</code><span data-i18n="cmd.viewprofile.opt.user">El usuario de Discord cuyo perfil quieres ver.</span></li>
                 </ul>
               </div>
             </article>
@@ -371,10 +387,10 @@
             <article class="cmd" id="cmd-sync">
               <div class="cmd__head">
                 <span class="cmd__name">/sync</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Vuelve a aplicar tu rol de verificado y tu apodo a partir de tu perfil de VRChat. Útil si perdiste el rol o cambiaste de nombre.</p>
+                <p data-i18n="cmd.sync.desc">Vuelve a aplicar tu rol de verificado y tu apodo a partir de tu perfil de VRChat. Útil si perdiste el rol o cambiaste de nombre.</p>
               </div>
             </article>
 
@@ -382,12 +398,12 @@
             <article class="cmd" id="cmd-worldinfo">
               <div class="cmd__head">
                 <span class="cmd__name">/worldinfo</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Busca un mundo de VRChat por su ID o URL y muestra su información.</p>
+                <p data-i18n="cmd.worldinfo.desc">Busca un mundo de VRChat por su ID o URL y muestra su información.</p>
                 <ul class="cmd__opts">
-                  <li><code>world</code><span>ID o URL del mundo de VRChat.</span></li>
+                  <li><code>world</code><span data-i18n="cmd.worldinfo.opt.world">ID o URL del mundo de VRChat.</span></li>
                 </ul>
               </div>
             </article>
@@ -396,14 +412,14 @@
             <article class="cmd" id="cmd-search">
               <div class="cmd__head">
                 <span class="cmd__name">/search</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Búsqueda paginada en VRChat. Elige qué tipo de resultado buscar y navega entre páginas con botones.</p>
+                <p data-i18n="cmd.search.desc">Búsqueda paginada en VRChat. Elige qué tipo de resultado buscar y navega entre páginas con botones.</p>
                 <ul class="cmd__opts">
-                  <li><code>world</code><span>Buscar mundos por nombre.</span></li>
-                  <li><code>avatar</code><span>Buscar avatares por nombre.</span></li>
-                  <li><code>user</code><span>Buscar usuarios por nombre.</span></li>
+                  <li><code>world</code><span data-i18n="cmd.search.opt.world">Buscar mundos por nombre.</span></li>
+                  <li><code>avatar</code><span data-i18n="cmd.search.opt.avatar">Buscar avatares por nombre.</span></li>
+                  <li><code>user</code><span data-i18n="cmd.search.opt.user">Buscar usuarios por nombre.</span></li>
                 </ul>
               </div>
             </article>
@@ -412,10 +428,10 @@
             <article class="cmd" id="cmd-invite">
               <div class="cmd__head">
                 <span class="cmd__name">/invite</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Devuelve un botón con el enlace para invitar el bot a otro servidor de Discord.</p>
+                <p data-i18n="cmd.invite.desc">Devuelve un botón con el enlace para invitar el bot a otro servidor de Discord.</p>
               </div>
             </article>
 
@@ -423,10 +439,10 @@
             <article class="cmd" id="cmd-howitworks">
               <div class="cmd__head">
                 <span class="cmd__name">/howitworks</span>
-                <span class="cmd__perm">Todos</span>
+                <span class="cmd__perm" data-i18n="perm.all">Todos</span>
               </div>
               <div class="cmd__body">
-                <p>Guía interactiva de 7 páginas que explica el bot paso a paso, con botones para navegar entre páginas.</p>
+                <p data-i18n="cmd.howitworks.desc">Guía interactiva de 7 páginas que explica el bot paso a paso, con botones para navegar entre páginas.</p>
               </div>
             </article>
 
@@ -434,17 +450,17 @@
             <article class="cmd" id="cmd-settings">
               <div class="cmd__head">
                 <span class="cmd__name">/settings</span>
-                <span class="cmd__perm cmd__perm--admin">Gestionar servidor</span>
+                <span class="cmd__perm cmd__perm--admin" data-i18n="perm.manage_server">Gestionar servidor</span>
               </div>
               <div class="cmd__body">
-                <p>Configura el comportamiento del bot en tu servidor. Requiere el permiso <strong>Gestionar servidor</strong>.</p>
+                <p data-i18n="cmd.settings.desc">Configura el comportamiento del bot en tu servidor. Requiere el permiso <strong>Gestionar servidor</strong>.</p>
                 <ul class="cmd__opts">
-                  <li><code>verification-role</code><span>Rol que se asigna a los usuarios verificados.</span></li>
-                  <li><code>verification-plus-role</code><span>Rol que se asigna a los usuarios verificados +18.</span></li>
-                  <li><code>auto-nickname</code><span>Activa o desactiva el cambio automático de apodo al nombre de VRChat.</span></li>
-                  <li><code>log-channel</code><span>Canal donde el bot registra las acciones (invitaciones, expulsiones, etc.).</span></li>
-                  <li><code>view</code><span>Muestra la configuración actual del servidor.</span></li>
-                  <li><code>reset</code><span>Restablece un ajuste concreto o todos a la vez.</span></li>
+                  <li><code>verification-role</code><span data-i18n="cmd.settings.opt.role">Rol que se asigna a los usuarios verificados.</span></li>
+                  <li><code>verification-plus-role</code><span data-i18n="cmd.settings.opt.plus">Rol que se asigna a los usuarios verificados +18.</span></li>
+                  <li><code>auto-nickname</code><span data-i18n="cmd.settings.opt.nick">Activa o desactiva el cambio automático de apodo al nombre de VRChat.</span></li>
+                  <li><code>log-channel</code><span data-i18n="cmd.settings.opt.log">Canal donde el bot registra las acciones (invitaciones, expulsiones, etc.).</span></li>
+                  <li><code>view</code><span data-i18n="cmd.settings.opt.view">Muestra la configuración actual del servidor.</span></li>
+                  <li><code>reset</code><span data-i18n="cmd.settings.opt.reset">Restablece un ajuste concreto o todos a la vez.</span></li>
                 </ul>
               </div>
             </article>
@@ -453,14 +469,14 @@
             <article class="cmd" id="cmd-group">
               <div class="cmd__head">
                 <span class="cmd__name">/group</span>
-                <span class="cmd__perm cmd__perm--admin">Administrador</span>
+                <span class="cmd__perm cmd__perm--admin" data-i18n="perm.admin">Administrador</span>
               </div>
               <div class="cmd__body">
-                <p>Gestiona el grupo de VRChat vinculado al servidor. La opción de grupo se autocompleta. Requiere el permiso <strong>Administrador</strong>.</p>
+                <p data-i18n="cmd.group.desc">Gestiona el grupo de VRChat vinculado al servidor. La opción de grupo se autocompleta. Requiere el permiso <strong>Administrador</strong>.</p>
                 <ul class="cmd__opts">
-                  <li><code>invite</code><span>Invita a un usuario al grupo de VRChat.</span></li>
-                  <li><code>kick</code><span>Expulsa a un usuario del grupo de VRChat.</span></li>
-                  <li><code>viewpermissions</code><span>Muestra qué permisos tiene el bot dentro del grupo.</span></li>
+                  <li><code>invite</code><span data-i18n="cmd.group.opt.invite">Invita a un usuario al grupo de VRChat.</span></li>
+                  <li><code>kick</code><span data-i18n="cmd.group.opt.kick">Expulsa a un usuario del grupo de VRChat.</span></li>
+                  <li><code>viewpermissions</code><span data-i18n="cmd.group.opt.perms">Muestra qué permisos tiene el bot dentro del grupo.</span></li>
                 </ul>
               </div>
             </article>
@@ -469,10 +485,10 @@
             <article class="cmd" id="cmd-linkgroup">
               <div class="cmd__head">
                 <span class="cmd__name">/linkgroup</span>
-                <span class="cmd__perm cmd__perm--admin">Administrador</span>
+                <span class="cmd__perm cmd__perm--admin" data-i18n="perm.admin">Administrador</span>
               </div>
               <div class="cmd__body">
-                <p>Flujo guiado de varios pasos para vincular un grupo de VRChat con el servidor de Discord. Usa botones para avanzar por cada paso.</p>
+                <p data-i18n="cmd.linkgroup.desc">Flujo guiado de varios pasos para vincular un grupo de VRChat con el servidor de Discord. Usa botones para avanzar por cada paso.</p>
               </div>
             </article>
 
@@ -480,23 +496,23 @@
             <article class="cmd" id="cmd-staff">
               <div class="cmd__head">
                 <span class="cmd__name">/staff</span>
-                <span class="cmd__perm cmd__perm--staff">Staff</span>
+                <span class="cmd__perm cmd__perm--staff" data-i18n="perm.staff">Staff</span>
               </div>
               <div class="cmd__body">
-                <p>Acciones reservadas al staff registrado del bot, agrupadas por área. El acceso se controla una sola vez en el enrutador.</p>
-                <h4>Usuarios</h4>
+                <p data-i18n="cmd.staff.desc">Acciones reservadas al staff registrado del bot, agrupadas por área. El acceso se controla una sola vez en el enrutador.</p>
+                <h4 data-i18n="cmd.staff.users">Usuarios</h4>
                 <ul class="cmd__opts">
-                  <li><code>user add</code><span>Vincula manualmente un usuario de Discord con un ID de VRChat.</span></li>
-                  <li><code>user ban</code><span>Banea un perfil por usuario de Discord, con motivo.</span></li>
-                  <li><code>user banid</code><span>Banea un perfil por su ID de perfil, con motivo.</span></li>
-                  <li><code>user unban</code><span>Quita el baneo a un perfil.</span></li>
-                  <li><code>user verify</code><span>Verificación +18 de otro usuario.</span></li>
+                  <li><code>user add</code><span data-i18n="cmd.staff.user.add">Vincula manualmente un usuario de Discord con un ID de VRChat.</span></li>
+                  <li><code>user ban</code><span data-i18n="cmd.staff.user.ban">Banea un perfil por usuario de Discord, con motivo.</span></li>
+                  <li><code>user banid</code><span data-i18n="cmd.staff.user.banid">Banea un perfil por su ID de perfil, con motivo.</span></li>
+                  <li><code>user unban</code><span data-i18n="cmd.staff.user.unban">Quita el baneo a un perfil.</span></li>
+                  <li><code>user verify</code><span data-i18n="cmd.staff.user.verify">Verificación +18 de otro usuario.</span></li>
                 </ul>
-                <h4>Miembros del staff</h4>
+                <h4 data-i18n="cmd.staff.members">Miembros del staff</h4>
                 <ul class="cmd__opts">
-                  <li><code>member add</code><span>Registra un nuevo miembro del staff.</span></li>
-                  <li><code>member remove</code><span>Elimina a un miembro del staff.</span></li>
-                  <li><code>member list</code><span>Lista todo el staff registrado.</span></li>
+                  <li><code>member add</code><span data-i18n="cmd.staff.member.add">Registra un nuevo miembro del staff.</span></li>
+                  <li><code>member remove</code><span data-i18n="cmd.staff.member.remove">Elimina a un miembro del staff.</span></li>
+                  <li><code>member list</code><span data-i18n="cmd.staff.member.list">Lista todo el staff registrado.</span></li>
                 </ul>
               </div>
             </article>
@@ -506,28 +522,28 @@
           <!-- Command table -->
           <!-- ---------------------------------------------------------------------------------------- -->
           <section class="section" id="tabla-comandos">
-            <p class="section__eyebrow">Resumen</p>
-            <h2 class="h-icon"><img src="img/page5.jpg" alt="" width="44" height="44" />Tabla de comandos</h2>
-            <p>Vista rápida de cada comando y quién puede usarlo.</p>
+            <p class="section__eyebrow" data-i18n="table.eyebrow">Resumen</p>
+            <h2 class="h-icon"><img src="img/page5.jpg" alt="" width="44" height="44" /><span data-i18n="table.title">Tabla de comandos</span></h2>
+            <p data-i18n="table.lead">Vista rápida de cada comando y quién puede usarlo.</p>
             <div class="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Comando</th><th>Para qué sirve</th><th>Acceso</th></tr>
+                  <tr><th data-i18n="table.h.cmd">Comando</th><th data-i18n="table.h.use">Para qué sirve</th><th data-i18n="table.h.access">Acceso</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td><code>/verification</code></td><td>Verificar o desvincular tu cuenta de VRChat</td><td>Todos</td></tr>
-                  <tr><td><code>/howtoverify</code></td><td>Video tutorial de verificación</td><td>Todos</td></tr>
-                  <tr><td><code>/profile</code></td><td>Ver tu perfil de VRChat</td><td>Todos</td></tr>
-                  <tr><td><code>/viewprofile</code></td><td>Ver el perfil de otro usuario</td><td>Todos</td></tr>
-                  <tr><td><code>/sync</code></td><td>Reaplicar rol y apodo desde tu perfil</td><td>Todos</td></tr>
-                  <tr><td><code>/worldinfo</code></td><td>Información de un mundo de VRChat</td><td>Todos</td></tr>
-                  <tr><td><code>/search</code></td><td>Buscar mundos, avatares o usuarios</td><td>Todos</td></tr>
-                  <tr><td><code>/invite</code></td><td>Enlace para invitar el bot</td><td>Todos</td></tr>
-                  <tr><td><code>/howitworks</code></td><td>Guía interactiva de 7 páginas</td><td>Todos</td></tr>
-                  <tr><td><code>/settings</code></td><td>Configurar el bot en el servidor</td><td>Gestionar servidor</td></tr>
-                  <tr><td><code>/group</code></td><td>Invitar, expulsar y ver permisos del grupo</td><td>Administrador</td></tr>
-                  <tr><td><code>/linkgroup</code></td><td>Vincular un grupo de VRChat</td><td>Administrador</td></tr>
-                  <tr><td><code>/staff</code></td><td>Gestión de usuarios y staff</td><td>Staff</td></tr>
+                  <tr><td><code>/verification</code></td><td data-i18n="table.r.verification">Verificar o desvincular tu cuenta de VRChat</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/howtoverify</code></td><td data-i18n="table.r.howtoverify">Video tutorial de verificación</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/profile</code></td><td data-i18n="table.r.profile">Ver tu perfil de VRChat</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/viewprofile</code></td><td data-i18n="table.r.viewprofile">Ver el perfil de otro usuario</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/sync</code></td><td data-i18n="table.r.sync">Reaplicar rol y apodo desde tu perfil</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/worldinfo</code></td><td data-i18n="table.r.worldinfo">Información de un mundo de VRChat</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/search</code></td><td data-i18n="table.r.search">Buscar mundos, avatares o usuarios</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/invite</code></td><td data-i18n="table.r.invite">Enlace para invitar el bot</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/howitworks</code></td><td data-i18n="table.r.howitworks">Guía interactiva de 7 páginas</td><td data-i18n="perm.all">Todos</td></tr>
+                  <tr><td><code>/settings</code></td><td data-i18n="table.r.settings">Configurar el bot en el servidor</td><td data-i18n="perm.manage_server">Gestionar servidor</td></tr>
+                  <tr><td><code>/group</code></td><td data-i18n="table.r.group">Invitar, expulsar y ver permisos del grupo</td><td data-i18n="perm.admin">Administrador</td></tr>
+                  <tr><td><code>/linkgroup</code></td><td data-i18n="table.r.linkgroup">Vincular un grupo de VRChat</td><td data-i18n="perm.admin">Administrador</td></tr>
+                  <tr><td><code>/staff</code></td><td data-i18n="table.r.staff">Gestión de usuarios y staff</td><td data-i18n="perm.staff">Staff</td></tr>
                 </tbody>
               </table>
             </div>
@@ -537,14 +553,14 @@
           <!-- Privacy -->
           <!-- ---------------------------------------------------------------------------------------- -->
           <section class="section" id="privacidad">
-            <p class="section__eyebrow">Transparencia</p>
-            <h2 class="h-icon"><img src="img/error.jpg" alt="" width="44" height="44" />Privacidad y datos</h2>
-            <p>
+            <p class="section__eyebrow" data-i18n="priv.eyebrow">Transparencia</p>
+            <h2 class="h-icon"><img src="img/error.jpg" alt="" width="44" height="44" /><span data-i18n="priv.title">Privacidad y datos</span></h2>
+            <p data-i18n="priv.body1">
               EnlaceVRC no te pide tu contraseña de VRChat ni usa OAuth de terceros. La propiedad de la
               cuenta se prueba con un código temporal en tu biografía, que puedes borrar en cuanto
               termines de verificar.
             </p>
-            <p>
+            <p data-i18n="priv.body2">
               El vínculo entre tu ID de Discord y tu ID de VRChat se guarda para hacer válida la
               verificación global. Puedes eliminar ese vínculo en cualquier momento con el botón
               <em>Desverificar</em> de <code>/verification</code>.
@@ -557,9 +573,9 @@
         <!-- -------------------------------------------------------------------------------------------- -->
         <footer class="footer">
           <div class="footer__inner">
-            <span>EnlaceVRC · Bot de verificación de VRChat para Discord</span>
+            <span data-i18n="footer.tagline">EnlaceVRC · Bot de verificación de VRChat para Discord</span>
             <span>
-              <a href="https://github.com/vicentefelipechile/enlacevrc-bot">Código fuente</a>
+              <a href="https://github.com/vicentefelipechile/enlacevrc-bot" data-i18n="footer.source">Código fuente</a>
               · MIT © Vicente
             </span>
           </div>
@@ -567,11 +583,13 @@
       </main>
     </div>
 
-    <!-- Third-party libs first, then our glue code. -->
+    <!-- Translations + UI prefs (language, effects toggle) before the behaviour scripts. -->
+    <script src="js/i18n.js?v=1" defer></script>
+    <!-- Third-party libs, then our glue code. -->
     <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/glightbox@3.3.0/dist/js/glightbox.min.js"></script>
-    <script src="js/effects.js?v=1" defer></script>
+    <script src="js/effects.js?v=2" defer></script>
     <script src="js/app.js?v=5" defer></script>
   </body>
 </html>

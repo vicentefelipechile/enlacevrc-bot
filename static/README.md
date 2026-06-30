@@ -9,6 +9,7 @@ Página de documentación del bot EnlaceVRC. HTML/CSS/JS sin framework ni paso d
 static/
 ├── index.html        # Toda la documentación (una sola página)
 ├── css/styles.css    # Estilos (tema cianotipo)
+├── js/i18n.js        # Traducciones (ES/EN/PT/FR) + preferencias de UI
 ├── js/app.js         # Scrollspy, buscador del sidebar, menú móvil
 ├── js/effects.js     # Capa visual: smooth scroll, reveal al scroll, grano, lightbox
 ├── img/              # Íconos cianotipo del bot usados en la página
@@ -27,6 +28,19 @@ Dependencias vía CDN (todas opcionales — la página funciona sin ellas):
 
 Todos los efectos respetan `prefers-reduced-motion`: si el sistema pide menos movimiento, no
 se activan animaciones, smooth scroll ni el grano animado.
+
+## Idiomas y preferencias
+
+La barra superior incluye:
+
+- **Selector de idioma** — Español, English, Português, Français. El idioma inicial se toma de
+  `localStorage`, y si no, del idioma del navegador; por defecto Español. El contenido base del HTML
+  está en español, así que si el JS falla la página sigue legible.
+- **Interruptor «Efectos»** — desactiva animaciones, smooth scroll y grano. Se guarda en
+  `localStorage`. Volver a activarlo recarga la página para reinicializar las librerías.
+
+Las traducciones viven en `js/i18n.js` (un diccionario por idioma). Cada texto del HTML lleva
+`data-i18n="clave"` (o `data-i18n-placeholder` / `-title` / `-aria` para atributos).
 
 ## Desarrollo local
 
