@@ -23,9 +23,15 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css?v=7" />
+    <!-- Third-party visual libs (pinned versions, served from CDN). -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox@3.3.0/dist/css/glightbox.min.css" />
+    <link rel="stylesheet" href="css/styles.css?v=8" />
   </head>
   <body>
+    <!-- Animated film grain overlay (drawn by effects.js; hidden if reduced motion). -->
+    <canvas id="grain" aria-hidden="true"></canvas>
+
     <a class="skip-link" href="#main">Saltar al contenido</a>
 
     <!-- ============================================================================================== -->
@@ -561,6 +567,11 @@
       </main>
     </div>
 
-    <script src="js/app.js?v=4" defer></script>
+    <!-- Third-party libs first, then our glue code. -->
+    <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/glightbox@3.3.0/dist/js/glightbox.min.js"></script>
+    <script src="js/effects.js?v=1" defer></script>
+    <script src="js/app.js?v=5" defer></script>
   </body>
 </html>

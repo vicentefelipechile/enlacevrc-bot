@@ -89,7 +89,17 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Grain layer over the whole page (very subtle). */
+/* Animated grain canvas (drawn by effects.js) sits above the page, very faint. */
+#grain {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: screen;
+}
+
+/* Static grain layer over the whole page (very subtle). */
 body::before {
   content: "";
   position: fixed;
@@ -500,6 +510,13 @@ p {
   text-transform: uppercase;
   color: var(--color-red);
   margin: 0 0 10px;
+}
+
+/* The lightbox wraps icons in an <a>; keep it from disrupting flex alignment. */
+a.glightbox {
+  display: inline-flex;
+  line-height: 0;
+  cursor: zoom-in;
 }
 
 /* Heading paired with a real bot icon. */

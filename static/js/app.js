@@ -89,6 +89,23 @@
     });
   });
 
+  // Route every in-page anchor (sidebar, hero buttons, top bar) through Lenis when it's active,
+  // so smooth scrolling is consistent. Falls back to the browser's native jump otherwise.
+  document.querySelectorAll('a[href^="#"]').forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const id = link.getAttribute("href").slice(1);
+      if (!id) return;
+      const target = document.getElementById(id);
+      if (!target) return;
+      if (window.__lenis) {
+        event.preventDefault();
+        window.__lenis.scrollTo(target, { offset: -72 });
+        setDrawer(false);
+        history.replaceState(null, "", "#" + id);
+      }
+    });
+  });
+
   // ------------------------------------------------------------------------------------------------------
   // Sidebar quick-filter — type to narrow the list of links
   // ------------------------------------------------------------------------------------------------------
