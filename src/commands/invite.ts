@@ -45,9 +45,14 @@ const REQUIRED_PERMISSIONS =
   PermissionFlagsBits.UseExternalEmojis |
   PermissionFlagsBits.UseExternalStickers;
 
+const SCOPE_URL = new URLSearchParams({
+  client_id: env.DISCORD_CLIENT_ID,
+  scope: "bot+applications.commands",
+  permissions: REQUIRED_PERMISSIONS.toString(),
+});
+
 const INVITE_URL =
-  `https://discord.com/oauth2/authorize?client_id=${env.DISCORD_CLIENT_ID}` +
-  `&scope=bot&permissions=${REQUIRED_PERMISSIONS}`;
+  `https://discord.com/oauth2/authorize?${SCOPE_URL.toString()}`;
 
 const AVATAR_FILE = "img/avatar.jpg";
 const AVATAR_ATTACHMENT_NAME = "avatar.jpg";
