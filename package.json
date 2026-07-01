@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "start": "tsc && node dist/src/index.js",
+    "start": "tsx src/index.ts",
     "deploy-commands": "tsx scripts/deploy-commands.ts",
     "deploy-commands:global": "tsx scripts/deploy-commands.ts --global",
     "clear-global-commands": "tsx scripts/clear-global-commands.ts",
