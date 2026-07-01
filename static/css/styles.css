@@ -351,20 +351,21 @@ kbd {
   transition: transform 0.16s ease, background-color 0.16s ease;
 }
 
-/* Checked state — on. */
-.fx-toggle input:checked + .fx-toggle__switch {
+/* Checked state — on. The switch is a later (not adjacent) sibling of the input:
+   the sparkles <svg> sits between them in the DOM, so these must use ~ not +. */
+.fx-toggle input:checked ~ .fx-toggle__switch {
   background: var(--color-accent-soft);
   border-color: var(--color-border-strong);
   box-shadow: var(--glow);
 }
 
-.fx-toggle input:checked + .fx-toggle__switch::after {
+.fx-toggle input:checked ~ .fx-toggle__switch::after {
   transform: translate(16px, -50%);
   background: var(--color-accent-text);
 }
 
 /* Keyboard focus ring. */
-.fx-toggle input:focus-visible + .fx-toggle__switch {
+.fx-toggle input:focus-visible ~ .fx-toggle__switch {
   outline: 2px solid var(--color-accent-text);
   outline-offset: 2px;
 }
