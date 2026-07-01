@@ -51,11 +51,12 @@ src/
 │   └── vrchat.ts         # VRCHAT_CLIENT + signIn() + notification handling
 ├── config/env.ts         # Validated, typed environment configuration (fail-fast)
 ├── constants/            # Static configuration (D1 setting keys + per-setting type metadata)
-├── lib/                  # logger, i18n (createLocalizer), cooldown, small helpers
+├── lib/                  # logger, i18n (createLocalizer), cooldown, vrchat-code (bio-code
+│                         #   derivation / VRChat id extraction), random-color, small helpers
 ├── ui/                   # Embed / Components V2 builders shared across commands (container,
-│                         #   verify-video, welcome-panel)
+│                         #   profile, verify-video, welcome-panel, social-icons, instance-parser)
 ├── types/                # Shared model types (models.ts) and the BotClient type (client.ts)
-└── data/                 # Static JSON data files
+└── data/                 # Static JSON data files (permissions.json — VRChat group permission catalog)
 
 scripts/
 ├── deploy-commands.ts    # Register slash commands with Discord (global + per guild)
@@ -200,7 +201,8 @@ Call sites use `D1Class.method(...)`. Conventions:
 - **`src/index.ts`** initializes `D1Class`, builds the `Client` (intents: `GuildMembers`, `Guilds`),
   loads `allCommands` into `client.commands`, creates the `client.vrchatGroups` cache, wires the four
   events with `void`, logs in, and installs a **single guarded `gracefulShutdown`** used by `SIGINT`,
-  `SIGTERM` and `uncaughtException`.
+  `SIGTERM` and `uncaughtException` (which exits non-zero so a supervisor can restart);
+  `unhandledRejection` is logged but does not shut down.
 - **`ready.ts`** signs in to VRChat and populates `client.vrchatGroups` (a
   `Collection<guildId, VRChatGroup[]>`) so the `group` autocomplete is instant. Per-server caching
   failures are logged and skipped.
