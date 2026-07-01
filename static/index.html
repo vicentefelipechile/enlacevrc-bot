@@ -26,7 +26,7 @@
     <!-- Third-party visual libs (pinned versions, served from CDN). -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox@3.3.0/dist/css/glightbox.min.css" />
-    <link rel="stylesheet" href="css/styles.css?v=9" />
+    <link rel="stylesheet" href="css/styles.css?v=10" />
   </head>
   <body>
     <!-- Animated film grain overlay (drawn by effects.js; hidden if reduced motion). -->
@@ -61,6 +61,7 @@
       <div class="topbar__controls">
         <label class="fx-toggle" data-i18n-title="ctrl.effects_title" title="Activa o desactiva animaciones y efectos">
           <input id="fx-toggle" type="checkbox" checked />
+          <span class="fx-toggle__switch" aria-hidden="true"></span>
           <span data-i18n="ctrl.effects">Efectos</span>
         </label>
         <label class="lang-select">
@@ -198,6 +199,10 @@
               OAuth de terceros.
             </p>
             <div class="hero__actions">
+              <a class="btn btn--invite" href="https://discord.com/oauth2/authorize?client_id=1407754981070737458&scope=bot+applications.commands&permissions=137841904704" target="_blank" rel="noopener">
+                <svg class="btn__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.27 5.33A16.6 16.6 0 0 0 15.1 4a.06.06 0 0 0-.07.03c-.18.32-.38.74-.52 1.07a15.4 15.4 0 0 0-4.6 0c-.14-.34-.35-.75-.53-1.07A.06.06 0 0 0 9.2 4a16.56 16.56 0 0 0-4.16 1.33.06.06 0 0 0-.03.02C2.44 9.24 1.72 13.05 2.07 16.8a.07.07 0 0 0 .03.05 16.7 16.7 0 0 0 5.03 2.56.07.07 0 0 0 .07-.02c.39-.53.73-1.09 1.03-1.68a.06.06 0 0 0-.04-.09c-.55-.2-1.07-.45-1.57-.73a.06.06 0 0 1-.01-.11l.31-.24a.06.06 0 0 1 .06-.01c3.3 1.51 6.87 1.51 10.13 0a.06.06 0 0 1 .07.01l.31.24a.06.06 0 0 1-.01.11c-.5.29-1.02.53-1.57.73a.06.06 0 0 0-.03.09c.3.59.65 1.15 1.03 1.68a.06.06 0 0 0 .07.02 16.65 16.65 0 0 0 5.04-2.56.07.07 0 0 0 .03-.05c.42-4.33-.71-8.11-2.99-11.45a.05.05 0 0 0-.02-.02ZM8.52 14.51c-.99 0-1.8-.91-1.8-2.02s.8-2.02 1.8-2.02c1 0 1.82.92 1.8 2.02 0 1.11-.8 2.02-1.8 2.02Zm6.97 0c-.99 0-1.8-.91-1.8-2.02s.8-2.02 1.8-2.02c1 0 1.82.92 1.8 2.02 0 1.11-.8 2.02-1.8 2.02Z"/></svg>
+                <span data-i18n="hero.cta_invite">Añadir a Discord</span>
+              </a>
               <a class="btn btn--primary" href="#verificacion" data-i18n="hero.cta_verify">Cómo verificarte</a>
               <a class="btn btn--ghost" href="#comandos" data-i18n="hero.cta_commands">Ver todos los comandos</a>
             </div>
@@ -620,7 +625,7 @@
     </div>
 
     <!-- Translations + UI prefs (language, effects toggle) before the behaviour scripts. -->
-    <script src="js/i18n.js?v=4" defer></script>
+    <script src="js/i18n.js?v=5" defer></script>
     <!-- Third-party libs, then our glue code. -->
     <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>

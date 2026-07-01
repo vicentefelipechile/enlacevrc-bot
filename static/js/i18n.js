@@ -53,6 +53,7 @@
     "hero.badge": "Verificación global",
     "hero.sub":
       "Un bot de Discord que vincula y verifica cuentas de VRChat. El usuario demuestra que es dueño de su cuenta colocando un código en su biografía de VRChat — sin contraseñas y sin OAuth de terceros.",
+    "hero.cta_invite": "Añadir a Discord",
     "hero.cta_verify": "Cómo verificarte",
     "hero.cta_commands": "Ver todos los comandos",
     "how.eyebrow": "Visión general",
@@ -212,6 +213,7 @@
     "hero.badge": "Global verification",
     "hero.sub":
       "A Discord bot that links and verifies VRChat accounts. Users prove they own their account by placing a code in their VRChat bio — no passwords, no third-party OAuth.",
+    "hero.cta_invite": "Add to Discord",
     "hero.cta_verify": "How to verify",
     "hero.cta_commands": "See all commands",
     "how.eyebrow": "Overview",
@@ -371,6 +373,7 @@
     "hero.badge": "Verificação global",
     "hero.sub":
       "Um bot do Discord que vincula e verifica contas do VRChat. O usuário prova ser dono da conta colocando um código na bio do VRChat — sem senhas e sem OAuth de terceiros.",
+    "hero.cta_invite": "Adicionar ao Discord",
     "hero.cta_verify": "Como verificar",
     "hero.cta_commands": "Ver todos os comandos",
     "how.eyebrow": "Visão geral",
@@ -530,6 +533,7 @@
     "hero.badge": "Vérification globale",
     "hero.sub":
       "Un bot Discord qui lie et vérifie les comptes VRChat. L'utilisateur prouve qu'il possède son compte en plaçant un code dans sa bio VRChat — sans mot de passe ni OAuth tiers.",
+    "hero.cta_invite": "Ajouter à Discord",
     "hero.cta_verify": "Comment se vérifier",
     "hero.cta_commands": "Voir toutes les commandes",
     "how.eyebrow": "Vue d'ensemble",
@@ -749,10 +753,14 @@
       fxEnabled = true;
     }
     window.__effectsEnabled = fxEnabled;
+    // Reflect the preference on <html> so CSS-only effects (e.g. the invite CTA
+    // pulse) can react live, without waiting for a reload like the canvas does.
+    document.documentElement.classList.toggle("no-fx", !fxEnabled);
     if (fx) {
       fx.checked = fxEnabled;
       fx.addEventListener("change", () => {
         window.__effectsEnabled = fx.checked;
+        document.documentElement.classList.toggle("no-fx", !fx.checked);
         try {
           localStorage.setItem(FX_KEY, fx.checked ? "1" : "0");
         } catch {
