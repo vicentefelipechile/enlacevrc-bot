@@ -44,14 +44,16 @@ src/
 ├── events/
 │   ├── ready.ts          # onClientReady: VRChat sign-in + warm the group cache
 │   ├── guildCreate.ts    # onGuildCreate: register a new server in D1
+│   ├── guildMemberAdd.ts # onGuildMemberAdd: welcome ping + self-heal the welcome panel
 │   └── interactionCreate.ts  # onInteractionCreate: the single interaction router
 ├── services/
 │   ├── d1.ts             # D1Class — static client for the Cloudflare D1 worker (cached)
 │   └── vrchat.ts         # VRCHAT_CLIENT + signIn() + notification handling
 ├── config/env.ts         # Validated, typed environment configuration (fail-fast)
-├── constants/            # Static configuration (e.g. D1 setting keys)
+├── constants/            # Static configuration (D1 setting keys + per-setting type metadata)
 ├── lib/                  # logger, i18n (createLocalizer), cooldown, small helpers
-├── ui/                   # Embed / Components V2 builders shared across commands
+├── ui/                   # Embed / Components V2 builders shared across commands (container,
+│                         #   verify-video, welcome-panel)
 ├── types/                # Shared model types (models.ts) and the BotClient type (client.ts)
 └── data/                 # Static JSON data files
 
@@ -79,6 +81,7 @@ export interface Command {
   execute(interaction: ChatInputCommandInteraction): Promise<void>;
   autocomplete?(interaction: AutocompleteInteraction): Promise<void>;
   handleButton?(interaction: ButtonInteraction): Promise<void>;
+  handleModal?(interaction: ModalSubmitInteraction): Promise<void>;
 }
 ```
 
@@ -118,11 +121,12 @@ command:
 | Chat input command | `interaction.commandName` | `command.execute` |
 | Autocomplete | `interaction.commandName` | `command.autocomplete` |
 | Button | `customId` prefix before the first `_` | `command.handleButton` |
+| Modal submit | `customId` prefix before the first `_` | `command.handleModal` |
 
-**Button custom IDs MUST be prefixed with the owning command's name**, formatted as
-`${command}_${component}` (e.g. `verification_verify`, `howitworks_page_3`). The router extracts the
-segment before the first `_`, looks up that command, and forwards the interaction to its
-`handleButton`. A command without a matching `handleButton` is simply ignored.
+**Button and modal custom IDs MUST be prefixed with the owning command's name**, formatted as
+`${command}_${component}` (e.g. `verification_verify`, `verification_modal`, `howitworks_page_3`). The
+router extracts the segment before the first `_`, looks up that command, and forwards the interaction to
+its `handleButton` / `handleModal`. A command without the matching handler is simply ignored.
 
 For purely local pagination / short-lived flows, a command may instead use a
 `createMessageComponentCollector` on its own reply (see `search.ts`) rather than `handleButton`.
@@ -194,7 +198,7 @@ Call sites use `D1Class.method(...)`. Conventions:
 ## Events & entry point
 
 - **`src/index.ts`** initializes `D1Class`, builds the `Client` (intents: `GuildMembers`, `Guilds`),
-  loads `allCommands` into `client.commands`, creates the `client.vrchatGroups` cache, wires the three
+  loads `allCommands` into `client.commands`, creates the `client.vrchatGroups` cache, wires the four
   events with `void`, logs in, and installs a **single guarded `gracefulShutdown`** used by `SIGINT`,
   `SIGTERM` and `uncaughtException`.
 - **`ready.ts`** signs in to VRChat and populates `client.vrchatGroups` (a
@@ -202,6 +206,14 @@ Call sites use `D1Class.method(...)`. Conventions:
   failures are logged and skipped.
 - **`guildCreate.ts`** finds the inviter via the audit log (`AuditLogEvent.BotAdd`), falling back to
   the bot itself, then registers the server in D1 idempotently.
+- **`guildMemberAdd.ts`** runs when a member joins. If the welcome ping is enabled
+  (`welcome_ping_enabled`) and a panel channel is set (`welcome_panel_channel`), it self-heals the
+  welcome panel (re-publishing it if its recorded message id is gone) and pings the member there to
+  pull their attention to it, deleting the ping after ~8s so the channel stays clean. Bots are ignored.
+  Post-configuration failures (channel deleted, send permission revoked) are reported to the
+  configured `log_channel`, or stdout as a last resort, and never crash the gateway. **This needs the
+  Server Members privileged intent enabled in the Developer Portal**, not just the `GuildMembers`
+  gateway intent.
 
 The bot extends the discord.js `Client` with two collections via the `BotClient` type
 (`src/types/client.ts`): `commands` and `vrchatGroups`. Cast to `BotClient` when you need them.
@@ -215,18 +227,59 @@ The bot extends the discord.js `Client` with two collections via the `BotClient`
 | `/invite` | — | Link button to the OAuth2 invite URL. |
 | `/howitworks` | — | 7-page paginated guide; `handleButton` (prefix `howitworks`). |
 | `/howtoverify` | — | Shows the verification tutorial video. |
-| `/verification` | `vrchat` (URL, optional) | Verify/unverify flow; `handleButton` (prefix `verification`). |
+| `/verification` | `vrchat` (URL), `username` (both optional) | Verify/unverify flow; also reachable via the welcome panel modal; `handleButton` + `handleModal` (prefix `verification`). |
 | `/profile` | — | Show the invoking user's VRChat profile. |
 | `/viewprofile` | `user` | Show another user's profile. |
 | `/sync` | — | Re-apply roles/nickname from the user's VRChat profile. |
 | `/worldinfo` | `world` | Look up a VRChat world by id/URL. |
 | `/search` | `world`, `avatar`, `user` | Paginated VRChat search; uses a local component collector. |
-| `/settings` | `verification-role`, `verification-plus-role`, `auto-nickname`, `log-channel`, `view`, `reset` | Per-server configuration. |
+| `/settings` | `set role\|channel\|toggle <variable> <value>`, `view`, `reset` | Per-server configuration (see below). |
+| `/welcomepanel` | `send [language]`, `preview`, `refresh` | Publishes/operates the static onboarding panel (language: Español/English, stored); `handleButton` (prefix `welcomepanel`). |
 | `/group` | `invite`, `kick`, `viewpermissions` | VRChat group management; `group` option uses autocomplete from `client.vrchatGroups`. |
 | `/linkgroup` | — | Multi-step state-machine flow to link a VRChat group; `handleButton` (prefix `linkgroup`). |
 | `/staff` | `user add\|ban\|banid\|unban\|verify`, `member add\|remove\|list` | Staff-only management (see below). |
 
 (Names above reflect the slash command names; consult each file for the exact option spelling.)
+
+### The `/settings` command
+
+Configuration is structured as `set` / `view` / `reset`. Because a slash option can't change type based
+on another option, `set` is split by **input type** into three subcommands so each keeps its native
+Discord picker: `set role <variable> <role>`, `set channel <variable> <channel>`,
+`set toggle <variable> <enabled>`. The `variable` option is a **closed choice list** scoped to that
+type (e.g. `set role` only offers role settings), so invalid combinations can't be expressed.
+
+The single source of truth is `SETTING_METADATA` in `src/constants/discord-settings.ts`: a list of
+`{ key, type }` (`type` ∈ `role | channel | toggle`). `set` builds each group's choices from it, `view`
+iterates it to render every setting, and `reset` lists it plus an "All" option. **To add a
+user-editable setting, add its key to `DISCORD_SERVER_SETTINGS`, append a `SETTING_METADATA` entry, and
+add a display label in `settings.ts`'s `SETTING_LABELS` — the three subcommands pick it up
+automatically.** Bot-managed bookkeeping (e.g. `welcome_panel_message`, which stores the published
+panel's message id) is deliberately left out of `SETTING_METADATA` so it never appears in the menus.
+
+### The welcome panel
+
+A persistent onboarding message a server posts in a text channel, with a Verify button that funnels
+new members into verification. Built in `src/ui/welcome-panel.ts`. The panel supports **only** Spanish
+(neutral LATAM) and English. Its language is chosen when publishing via `/welcomepanel send language:` and
+**stored** in `welcome_panel_language` (`es`/`en`); `resolvePanelLocale(stored, guild)` applies it, falling
+back to `guild.preferredLocale` (any Spanish → LATAM, never the SpanishES flavor) when no language was
+stored. Storing it means `refresh` and the member-join self-heal re-render the panel in the same language.
+Configuration lives in `/settings` (`welcome_panel_channel`, `welcome_ping_enabled`); operation lives in
+`/welcomepanel` (`send` publishes, records the message id, and persists the chosen language; `preview`
+shows it privately in the stored language; `refresh` edits the live panel or re-publishes if deleted). Both
+`welcome_panel_message` and `welcome_panel_language` are deliberately kept out of `SETTING_METADATA` (they
+aren't role/channel/toggle pickers). A shared
+`resolvePanelChannel` runs the send pre-flight (exists / is text / `ViewChannel` / `SendMessages`) and
+turns each failure into a localized, actionable message instead of a raw `50013`. The panel's Verify
+button replies ephemerally with the verification video (shared `src/ui/verify-video.ts` builder) plus an
+**Enter username/URL** button. That button (built by `buildOpenModalButton`, exported from
+`verification.ts`, custom id `verification_openmodal`) opens a modal (`verification_modal`) so a member
+can link without typing anything in the channel — which lets owners lock down chat permissions. The modal
+submit routes to `verification.handleModal`, which runs the same resolution as the slash command: a
+URL/id issues the bio code immediately; a bare username is searched and the user confirms which of up to
+three candidates is theirs (or it cancels). `verification.ts` shares this via `resolveInputAndReply` and
+`offerUnverifyIfLinked`, used by both `execute` and `handleModal`.
 
 ### The `/staff` command
 
@@ -374,6 +427,11 @@ Run `npm run login` once before first start so the VRChat session cookie exists.
 types → helpers → `data` builder → `execute`/`handleButton` → `export const command`), register it in
 `src/commands/index.ts`, then `npm run deploy-commands`. If it has buttons, prefix their custom IDs
 with the command name and add `handleButton`.
+
+**A new server setting:** add the key to `DISCORD_SERVER_SETTINGS`, append a `{ key, type }` entry to
+`SETTING_METADATA` (both in `src/constants/discord-settings.ts`), and add a display label to
+`SETTING_LABELS` in `src/commands/settings.ts`. `/settings set|view|reset` then expose it
+automatically — no per-setting subcommand to write.
 
 **A new D1 endpoint:** add a static method to `D1Class` following the existing pattern (use
 `_request<T>`, read through `_getCached` with an appropriate TTL, invalidate on mutation), and add

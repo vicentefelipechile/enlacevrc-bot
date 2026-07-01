@@ -1,8 +1,10 @@
 // =========================================================================================================
 // Settings Command
 // =========================================================================================================
-// Lets server managers configure the bot: verification role, 18+ role, auto-nickname, log channel, plus
-// view and reset subcommands. Requires the Manage Guild permission.
+// Per-server configuration, structured as `set` / `view` / `reset`. `set` is split by input type so each
+// keeps its native Discord picker: `set role`, `set channel`, `set toggle`. Each group only offers the
+// variables of its own type as a closed choice list, so invalid combinations (e.g. toggling a role) can't
+// be expressed. `view` renders every setting; `reset` clears one or all. Requires the Manage Guild perm.
 
 // =========================================================================================================
 // Imports
@@ -18,121 +20,114 @@ import {
 import type { ChatInputCommandInteraction, Guild } from "discord.js";
 
 import type { Command } from "./types.js";
-import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
+import {
+  DISCORD_SERVER_SETTINGS,
+  SETTING_METADATA,
+  SETTING_TYPE,
+} from "../constants/discord-settings.js";
+import type { SettingType } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
 import { printMessage } from "../lib/logger.js";
 import { D1Class } from "../services/d1.js";
 import { buildContainer, textContainer } from "../ui/container.js";
 
-
 // =========================================================================================================
 // Constants
 // =========================================================================================================
 
+const SUBCOMMAND_GROUP = {
+  SET: "set",
+} as const;
+
 const SUBCOMMAND = {
-  VERIFICATION_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE,
-  VERIFICATION_PLUS_ROLE: DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE,
-  AUTO_NICKNAME: DISCORD_SERVER_SETTINGS.AUTO_NICKNAME,
-  LOG_CHANNEL: DISCORD_SERVER_SETTINGS.LOG_CHANNEL,
+  ROLE: SETTING_TYPE.ROLE,
+  CHANNEL: SETTING_TYPE.CHANNEL,
+  TOGGLE: SETTING_TYPE.TOGGLE,
   VIEW: "view",
   RESET: "reset",
 } as const;
 
-const RESET_ALL = "all";
-const RESET_VALUE = "0";
-const BOOL_TRUE = "1";
+const OPTION = {
+  VARIABLE: "variable",
+  ROLE: "role",
+  CHANNEL: "channel",
+  ENABLED: "enabled",
+  SETTING: "setting",
+} as const;
 
-// Maps a reset choice value to the setting key it clears.
-const RESET_CHOICES: { name: string; value: string; key: string }[] = [
-  { name: "Verified Role", value: "verification_role", key: DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE },
-  {
-    name: "Verified 18+ Role",
-    value: "verification_plus_role",
-    key: DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE,
-  },
-  { name: "Auto Nickname", value: "auto_nickname", key: DISCORD_SERVER_SETTINGS.AUTO_NICKNAME },
-  { name: "Log Channel", value: "log_channel", key: DISCORD_SERVER_SETTINGS.LOG_CHANNEL },
-  { name: "All Settings", value: RESET_ALL, key: RESET_ALL },
-];
+const RESET_ALL = "all";
+const BOOL_TRUE = "1";
+const BOOL_FALSE = "0";
+const UNSET_VALUE = "0";
+
+// Display labels for each setting key, shown in `set`/`reset` choice menus and the `view` output. Kept
+// here (English) because choice names are part of the slash command definition, not localized at runtime.
+const SETTING_LABELS: Record<string, string> = {
+  [DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE]: "Verification Role",
+  [DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE]: "18+ Verification Role",
+  [DISCORD_SERVER_SETTINGS.LOG_CHANNEL]: "Log Channel",
+  [DISCORD_SERVER_SETTINGS.WELCOME_PANEL_CHANNEL]: "Welcome Panel Channel",
+  [DISCORD_SERVER_SETTINGS.AUTO_NICKNAME]: "Auto Nickname",
+  [DISCORD_SERVER_SETTINGS.WELCOME_PING_ENABLED]: "Welcome Ping",
+};
+
+/** Setting keys of a given input type, used to build each `set` group's closed choice list. */
+function keysOfType(type: SettingType): string[] {
+  return SETTING_METADATA.filter((m) => m.type === type).map((m) => m.key);
+}
+
+/** Builds {name,value} choices (value = the raw setting key) for every setting of a given type. */
+function choicesOfType(type: SettingType): { name: string; value: string }[] {
+  return keysOfType(type).map((key) => ({ name: SETTING_LABELS[key] ?? key, value: key }));
+}
 
 const localize = createLocalizer({
   [Locale.EnglishUS]: {
-    "error.permission": 'You need the "Manage Server" permission to use this command.',
     "error.general": "An error occurred while processing the settings. Please try again later.",
-    "success.verification_role": "Verification role has been set to {role}.",
-    "success.verification_plus_role": "18+ verification role has been set to {role}.",
-    "success.auto_nickname": "Auto nickname update has been {status}.",
-    "success.log_channel": "Log channel has been set to {channel}.",
-    "success.reset": 'Setting "{setting}" has been reset successfully.',
+    "success.role": "{label} has been set to {role}.",
+    "success.channel": "{label} has been set to {channel}.",
+    "success.toggle": "{label} has been {status}.",
+    "success.reset": '"{label}" has been reset successfully.',
     "success.reset_all": "All server settings have been reset successfully.",
     "status.enabled": "enabled",
     "status.disabled": "disabled",
     "view.title": "Server Settings - {serverName}",
     "view.description": "Current bot configuration for this server:",
-    "view.verification_role": "Verification Role:",
-    "view.verification_plus_role": "18+ Verification Role:",
-    "view.auto_nickname": "Auto Nickname:",
-    "view.log_channel": "Log Channel:",
     "view.not_set": "Not set",
     "view.enabled": "Enabled",
     "view.disabled": "Disabled",
-    "reset.verification_role": "Verification Role",
-    "reset.verification_plus_role": "18+ Verification Role",
-    "reset.auto_nickname": "Auto Nickname",
-    "reset.log_channel": "Log Channel",
   },
   [Locale.SpanishLATAM]: {
-    "error.permission": 'Necesitas el permiso "Administrar Servidor" para usar este comando.',
     "error.general":
       "Ocurrió un error al procesar la configuración. Por favor, inténtalo de nuevo más tarde.",
-    "success.verification_role": "El rol de verificación ha sido establecido como {role}.",
-    "success.verification_plus_role": "El rol de verificación +18 ha sido establecido como {role}.",
-    "success.auto_nickname": "La actualización automática de apodos ha sido {status}.",
-    "success.log_channel": "El canal de log ha sido establecido como {channel}.",
-    "success.reset": 'La configuración "{setting}" ha sido restablecida exitosamente.',
+    "success.role": "{label} ha sido establecido como {role}.",
+    "success.channel": "{label} ha sido establecido como {channel}.",
+    "success.toggle": "{label} ha sido {status}.",
+    "success.reset": 'La configuración "{label}" ha sido restablecida exitosamente.',
     "success.reset_all": "Todas las configuraciones del servidor han sido restablecidas exitosamente.",
-    "status.enabled": "habilitada",
-    "status.disabled": "deshabilitada",
+    "status.enabled": "habilitado",
+    "status.disabled": "deshabilitado",
     "view.title": "Configuración del Servidor - {serverName}",
     "view.description": "Configuración actual del bot para este servidor:",
-    "view.verification_role": "Rol de Verificación:",
-    "view.verification_plus_role": "Rol de Verificación +18:",
-    "view.auto_nickname": "Apodo Automático:",
-    "view.log_channel": "Canal de Log:",
     "view.not_set": "No establecido",
     "view.enabled": "Habilitado",
     "view.disabled": "Deshabilitado",
-    "reset.verification_role": "Rol de Verificación",
-    "reset.verification_plus_role": "Rol de Verificación +18",
-    "reset.auto_nickname": "Apodo Automático",
-    "reset.log_channel": "Canal de Log",
   },
   [Locale.SpanishES]: {
-    "error.permission":
-      '¡A ver, tronco! Necesitas el permiso de "Administrar Servidor" para meter mano aquí.',
     "error.general":
       "¡Madre mía, qué movida! Algo ha fallado con la configuración. Prueba otra vez en un rato, colega.",
-    "success.verification_role": "¡De lujo! El rol de verificación ahora es {role}, como Dios manda.",
-    "success.verification_plus_role": "¡Canelita en rama! El rol de verificación +18 ahora es {role}.",
-    "success.auto_nickname": "La actualización automática de apodos está {status}, chaval.",
-    "success.log_channel": "¡Hecho! El canal de log ahora es {channel}, tronco.",
-    "success.reset": 'El ajuste "{setting}" se ha reseteado que da gusto.',
+    "success.role": "¡De lujo! {label} ahora es {role}, como Dios manda.",
+    "success.channel": "¡Hecho! {label} ahora es {channel}, tronco.",
+    "success.toggle": "{label} está {status}, chaval.",
+    "success.reset": 'El ajuste "{label}" se ha reseteado que da gusto.',
     "success.reset_all": "¡Menuda limpieza! Todos los ajustes del servidor han vuelto a cero, como nuevos.",
-    "status.enabled": "activada, como debe ser",
-    "status.disabled": "desactivada, que tampoco pasa nada",
+    "status.enabled": "activado, como debe ser",
+    "status.disabled": "desactivado, que tampoco pasa nada",
     "view.title": "Ajustes del Server - {serverName}",
     "view.description": "Aquí tienes toda la configuración del bot para este antro, colega:",
-    "view.verification_role": "Rol de Verificación:",
-    "view.verification_plus_role": "Rol de Verificación +18:",
-    "view.auto_nickname": "Apodo Automático:",
-    "view.log_channel": "Canal de Log:",
     "view.not_set": "Ni puesto, macho",
     "view.enabled": "Activado",
     "view.disabled": "Desactivado",
-    "reset.verification_role": "Rol de Verificación",
-    "reset.verification_plus_role": "Rol de Verificación +18",
-    "reset.auto_nickname": "Apodo Automático",
-    "reset.log_channel": "Canal de Log",
   },
 });
 
@@ -148,7 +143,7 @@ type Phrases = ReturnType<typeof localize>;
 
 /** Formats a role mention for display, or the "not set" phrase when absent/unknown. */
 function formatRole(roleId: string | undefined, guild: Guild, phrases: Phrases): string {
-  if (!roleId) {
+  if (!roleId || roleId === UNSET_VALUE) {
     return phrases["view.not_set"];
   }
   return guild.roles.cache.has(roleId) ? `<@&${roleId}>` : phrases["view.not_set"];
@@ -156,7 +151,7 @@ function formatRole(roleId: string | undefined, guild: Guild, phrases: Phrases):
 
 /** Formats a channel mention for display, or the "not set" phrase when absent/unknown. */
 function formatChannel(channelId: string | undefined, guild: Guild, phrases: Phrases): string {
-  if (!channelId) {
+  if (!channelId || channelId === UNSET_VALUE) {
     return phrases["view.not_set"];
   }
   return guild.channels.cache.has(channelId) ? `<#${channelId}>` : phrases["view.not_set"];
@@ -167,10 +162,27 @@ function formatBoolean(value: string | undefined, phrases: Phrases): string {
   if (value === BOOL_TRUE) {
     return phrases["view.enabled"];
   }
-  if (value === RESET_VALUE) {
+  if (value === BOOL_FALSE) {
     return phrases["view.disabled"];
   }
   return phrases["view.not_set"];
+}
+
+/** Renders a single stored setting value according to its declared input type. */
+function formatValue(
+  type: SettingType,
+  value: string | undefined,
+  guild: Guild,
+  phrases: Phrases,
+): string {
+  switch (type) {
+    case SETTING_TYPE.ROLE:
+      return formatRole(value, guild, phrases);
+    case SETTING_TYPE.CHANNEL:
+      return formatChannel(value, guild, phrases);
+    case SETTING_TYPE.TOGGLE:
+      return formatBoolean(value, phrases);
+  }
 }
 
 // =========================================================================================================
@@ -185,52 +197,70 @@ const data = new SlashCommandBuilder()
     [Locale.SpanishES]: "Para configurar el bot en este server, que eres el mandamás.",
   })
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-  .addSubcommand((sub) =>
-    sub
-      .setName(SUBCOMMAND.VERIFICATION_ROLE)
-      .setDescription("Set the role given to verified users")
-      .addRoleOption((opt) =>
-        opt.setName("role").setDescription("The role to assign to verified users").setRequired(true),
-      ),
-  )
-  .addSubcommand((sub) =>
-    sub
-      .setName(SUBCOMMAND.VERIFICATION_PLUS_ROLE)
-      .setDescription("Set the role given to 18+ verified users")
-      .addRoleOption((opt) =>
-        opt
-          .setName("role")
-          .setDescription("The role to assign to 18+ verified users")
-          .setRequired(true),
-      ),
-  )
-  .addSubcommand((sub) =>
-    sub
-      .setName(SUBCOMMAND.AUTO_NICKNAME)
-      .setDescription("Enable/disable automatic nickname updates from VRChat")
-      .addBooleanOption((opt) =>
-        opt.setName("enabled").setDescription("Enable or disable auto nickname updates").setRequired(true),
-      ),
-  )
-  .addSubcommand((sub) =>
-    sub
-      .setName(SUBCOMMAND.LOG_CHANNEL)
-      .setDescription("Set the channel where bot actions will be logged")
-      .addChannelOption((opt) =>
-        opt.setName("channel").setDescription("The channel to log bot actions").setRequired(true),
+  .addSubcommandGroup((group) =>
+    group
+      .setName(SUBCOMMAND_GROUP.SET)
+      .setDescription("Set a server setting")
+      .addSubcommand((sub) =>
+        sub
+          .setName(SUBCOMMAND.ROLE)
+          .setDescription("Set a role-type setting")
+          .addStringOption((opt) =>
+            opt
+              .setName(OPTION.VARIABLE)
+              .setDescription("Which role setting to change")
+              .setRequired(true)
+              .addChoices(...choicesOfType(SETTING_TYPE.ROLE)),
+          )
+          .addRoleOption((opt) =>
+            opt.setName(OPTION.ROLE).setDescription("The role to assign").setRequired(true),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName(SUBCOMMAND.CHANNEL)
+          .setDescription("Set a channel-type setting")
+          .addStringOption((opt) =>
+            opt
+              .setName(OPTION.VARIABLE)
+              .setDescription("Which channel setting to change")
+              .setRequired(true)
+              .addChoices(...choicesOfType(SETTING_TYPE.CHANNEL)),
+          )
+          .addChannelOption((opt) =>
+            opt.setName(OPTION.CHANNEL).setDescription("The channel to assign").setRequired(true),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName(SUBCOMMAND.TOGGLE)
+          .setDescription("Enable or disable a toggle-type setting")
+          .addStringOption((opt) =>
+            opt
+              .setName(OPTION.VARIABLE)
+              .setDescription("Which toggle setting to change")
+              .setRequired(true)
+              .addChoices(...choicesOfType(SETTING_TYPE.TOGGLE)),
+          )
+          .addBooleanOption((opt) =>
+            opt.setName(OPTION.ENABLED).setDescription("Enable or disable it").setRequired(true),
+          ),
       ),
   )
   .addSubcommand((sub) => sub.setName(SUBCOMMAND.VIEW).setDescription("View current server settings"))
   .addSubcommand((sub) =>
     sub
       .setName(SUBCOMMAND.RESET)
-      .setDescription("Reset a specific setting")
+      .setDescription("Reset a specific setting (or all of them)")
       .addStringOption((opt) =>
         opt
-          .setName("setting")
+          .setName(OPTION.SETTING)
           .setDescription("The setting to reset")
           .setRequired(true)
-          .addChoices(...RESET_CHOICES.map(({ name, value }) => ({ name, value }))),
+          .addChoices(
+            ...SETTING_METADATA.map((m) => ({ name: SETTING_LABELS[m.key] ?? m.key, value: m.key })),
+            { name: "All Settings", value: RESET_ALL },
+          ),
       ),
   );
 
@@ -252,6 +282,7 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
 
   const guild = interaction.guild;
   const serverId = guild.id;
+  const group = interaction.options.getSubcommandGroup(false);
   const subcommand = interaction.options.getSubcommand();
   const userRequestData = {
     discord_id: interaction.user.id,
@@ -259,69 +290,57 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
   };
 
   try {
+    // `set role | channel | toggle`: the variable option carries the setting key directly.
+    if (group === SUBCOMMAND_GROUP.SET) {
+      const key = interaction.options.getString(OPTION.VARIABLE, true);
+      const label = SETTING_LABELS[key] ?? key;
+
+      switch (subcommand) {
+        case SUBCOMMAND.ROLE: {
+          const role = interaction.options.getRole(OPTION.ROLE, true);
+          await D1Class.updateDiscordSetting(userRequestData, serverId, key, role.id);
+          await reply(
+            phrases["success.role"].replace("{label}", label).replace("{role}", `<@&${role.id}>`),
+          );
+          break;
+        }
+        case SUBCOMMAND.CHANNEL: {
+          const channel = interaction.options.getChannel(OPTION.CHANNEL, true);
+          await D1Class.updateDiscordSetting(userRequestData, serverId, key, channel.id);
+          await reply(
+            phrases["success.channel"]
+              .replace("{label}", label)
+              .replace("{channel}", `<#${channel.id}>`),
+          );
+          break;
+        }
+        case SUBCOMMAND.TOGGLE: {
+          const enabled = interaction.options.getBoolean(OPTION.ENABLED, true);
+          await D1Class.updateDiscordSetting(
+            userRequestData,
+            serverId,
+            key,
+            enabled ? BOOL_TRUE : BOOL_FALSE,
+          );
+          const status = enabled ? phrases["status.enabled"] : phrases["status.disabled"];
+          await reply(phrases["success.toggle"].replace("{label}", label).replace("{status}", status));
+          break;
+        }
+        default:
+          await reply(phrases["error.general"], Colors.Red);
+          break;
+      }
+      return;
+    }
+
     switch (subcommand) {
-      case SUBCOMMAND.VERIFICATION_ROLE: {
-        const role = interaction.options.getRole("role", true);
-        await D1Class.updateDiscordSetting(
-          userRequestData,
-          serverId,
-          SUBCOMMAND.VERIFICATION_ROLE,
-          role.id,
-        );
-        await reply(phrases["success.verification_role"].replace("{role}", `<@&${role.id}>`));
-        break;
-      }
-
-      case SUBCOMMAND.VERIFICATION_PLUS_ROLE: {
-        const role = interaction.options.getRole("role", true);
-        await D1Class.updateDiscordSetting(
-          userRequestData,
-          serverId,
-          SUBCOMMAND.VERIFICATION_PLUS_ROLE,
-          role.id,
-        );
-        await reply(phrases["success.verification_plus_role"].replace("{role}", `<@&${role.id}>`));
-        break;
-      }
-
-      case SUBCOMMAND.AUTO_NICKNAME: {
-        const enabled = interaction.options.getBoolean("enabled", true);
-        const value = enabled ? BOOL_TRUE : RESET_VALUE;
-        await D1Class.updateDiscordSetting(
-          userRequestData,
-          serverId,
-          SUBCOMMAND.AUTO_NICKNAME,
-          value,
-        );
-        const status = enabled ? phrases["status.enabled"] : phrases["status.disabled"];
-        await reply(phrases["success.auto_nickname"].replace("{status}", status));
-        break;
-      }
-
-      case SUBCOMMAND.LOG_CHANNEL: {
-        const channel = interaction.options.getChannel("channel", true);
-        await D1Class.updateDiscordSetting(
-          userRequestData,
-          serverId,
-          SUBCOMMAND.LOG_CHANNEL,
-          channel.id,
-        );
-        await reply(phrases["success.log_channel"].replace("{channel}", `<#${channel.id}>`));
-        break;
-      }
-
       case SUBCOMMAND.VIEW: {
         const settings = await D1Class.getAllDiscordSettings(userRequestData, serverId);
-        const description =
-          `${phrases["view.description"]}\n\n` +
-          `**${phrases["view.verification_role"]}** ` +
-          `${formatRole(settings[SUBCOMMAND.VERIFICATION_ROLE], guild, phrases)}\n` +
-          `**${phrases["view.verification_plus_role"]}** ` +
-          `${formatRole(settings[SUBCOMMAND.VERIFICATION_PLUS_ROLE], guild, phrases)}\n` +
-          `**${phrases["view.auto_nickname"]}** ` +
-          `${formatBoolean(settings[SUBCOMMAND.AUTO_NICKNAME], phrases)}\n` +
-          `**${phrases["view.log_channel"]}** ` +
-          `${formatChannel(settings[SUBCOMMAND.LOG_CHANNEL], guild, phrases)}`;
+        const lines = SETTING_METADATA.map((m) => {
+          const label = SETTING_LABELS[m.key] ?? m.key;
+          return `**${label}:** ${formatValue(m.type, settings[m.key], guild, phrases)}`;
+        });
+        const description = `${phrases["view.description"]}\n\n${lines.join("\n")}`;
 
         await interaction.editReply({
           flags: MessageFlags.IsComponentsV2,
@@ -338,43 +357,19 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
       }
 
       case SUBCOMMAND.RESET: {
-        const settingToReset = interaction.options.getString("setting", true);
+        const settingToReset = interaction.options.getString(OPTION.SETTING, true);
 
         if (settingToReset === RESET_ALL) {
-          await D1Class.updateDiscordSetting(
-            userRequestData,
-            serverId,
-            DISCORD_SERVER_SETTINGS.AUTO_NICKNAME,
-            RESET_VALUE,
-          );
-          await D1Class.updateDiscordSetting(
-            userRequestData,
-            serverId,
-            DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE,
-            RESET_VALUE,
-          );
-          await D1Class.updateDiscordSetting(
-            userRequestData,
-            serverId,
-            DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE,
-            RESET_VALUE,
-          );
-          await D1Class.updateDiscordSetting(
-            userRequestData,
-            serverId,
-            DISCORD_SERVER_SETTINGS.LOG_CHANNEL,
-            RESET_VALUE,
-          );
+          for (const m of SETTING_METADATA) {
+            await D1Class.updateDiscordSetting(userRequestData, serverId, m.key, UNSET_VALUE);
+          }
           await reply(phrases["success.reset_all"]);
           break;
         }
 
-        const choice = RESET_CHOICES.find((c) => c.value === settingToReset);
-        if (choice) {
-          await D1Class.updateDiscordSetting(userRequestData, serverId, choice.key, RESET_VALUE);
-        }
-        const resetLabel = phrases[`reset.${settingToReset}` as keyof Phrases] ?? settingToReset;
-        await reply(phrases["success.reset"].replace("{setting}", resetLabel));
+        await D1Class.updateDiscordSetting(userRequestData, serverId, settingToReset, UNSET_VALUE);
+        const label = SETTING_LABELS[settingToReset] ?? settingToReset;
+        await reply(phrases["success.reset"].replace("{label}", label));
         break;
       }
 
@@ -383,7 +378,6 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
         break;
     }
   } catch (error) {
-    // Bug fix: the original referenced the non-existent key `error.error`; use `error.general`.
     printMessage("Settings command error:", String(error));
     await reply(phrases["error.general"], Colors.Red);
   }

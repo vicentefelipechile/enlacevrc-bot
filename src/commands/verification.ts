@@ -17,16 +17,24 @@ import {
   Colors,
   ContainerBuilder,
   Locale,
-  MediaGalleryBuilder,
   MessageFlags,
+  ModalBuilder,
   SectionBuilder,
   SeparatorBuilder,
   SeparatorSpacingSize,
   SlashCommandBuilder,
   TextDisplayBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   ThumbnailBuilder,
 } from "discord.js";
-import type { ButtonInteraction, ChatInputCommandInteraction, GuildMember } from "discord.js";
+import type {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  GuildMember,
+  ModalSubmitInteraction,
+  RepliableInteraction,
+} from "discord.js";
 import NodeCache from "node-cache";
 
 import type { Command } from "./types.js";
@@ -37,14 +45,13 @@ import { generateCodeByVRChat, getVRChatId } from "../lib/vrchat-code.js";
 import { D1Class } from "../services/d1.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
 import { textContainer } from "../ui/container.js";
+import { buildVerifyVideo } from "../ui/verify-video.js";
 
 // =========================================================================================================
 // Constants
 // =========================================================================================================
 
 const VRCHAT_URL = "https://vrchat.com/home";
-const VERIFY_VIDEO_FILE = "img/verify.webm";
-const VERIFY_VIDEO_NAME = "verify.webm";
 const CODE_CACHE_TTL_SECONDS = 5 * 60;
 const AUTO_NICKNAME_ENABLED = "1";
 
@@ -61,10 +68,18 @@ const BUTTON = {
   UNVERIFY: "unverify",
   CANCEL: "cancelaction",
   PROFILE: "profile",
+  // Opens the modal that lets the user type their VRChat username/URL without writing in the channel.
+  OPEN_MODAL: "openmodal",
   // Username-candidate confirmation step: confirm this profile is mine / show the next candidate.
   CONFIRM_PROFILE: "confirmprofile",
   REJECT_PROFILE: "rejectprofile",
 } as const;
+
+// Modal (and its single text input) ids, also prefixed so the router dispatches them to this command.
+const MODAL = {
+  INPUT: "vrchatinput",
+} as const;
+const MODAL_ID = "verification_modal";
 
 const PREFIX = "verification";
 const customId = (component: string): string => `${PREFIX}_${component}`;
@@ -105,6 +120,11 @@ const localize = createLocalizer({
     "verify.description":
       "# Verification\n\nTo verify your account, you need to provide the URL to your VRChat profile as a command argument.",
     "verify.gotovrchat": "Go to VRChat",
+    "modal.open": "Enter username or URL",
+    "modal.title": "Verify your VRChat account",
+    "modal.label": "VRChat username or profile URL",
+    "modal.placeholder": "Enter your VRChat username or profile URL here",
+    "modal.empty": "You didn't enter anything. Please try again.",
     success: "Congratulations! Your account has been successfully verified.",
     "success.age_verified":
       "\n\nYour VRChat age is verified, so you have also been granted **+18 verification** automatically. Verified by {bot}.",
@@ -140,6 +160,11 @@ const localize = createLocalizer({
     "verify.description":
       "# Verificación\n\nPara verificar tu cuenta tienes que proporcionar la URL a tu perfil de VRChat como argumento del comando.",
     "verify.gotovrchat": "Ir a VRChat",
+    "modal.open": "Introduce tu usuario o URL",
+    "modal.title": "Verifica tu cuenta de VRChat",
+    "modal.label": "Usuario o URL de tu perfil de VRChat",
+    "modal.placeholder": "Introduce aquí tu nombre de usuario o URL de VRChat",
+    "modal.empty": "No introdujiste nada. Por favor, inténtalo de nuevo.",
     success: "¡Felicidades! Tu cuenta ha sido verificada exitosamente.",
     "success.age_verified":
       "\n\nTu edad en VRChat está verificada, así que también se te otorgó la **verificación +18** automáticamente. Verificado por {bot}.",
@@ -175,6 +200,11 @@ const localize = createLocalizer({
     "verify.description":
       "# Verificación\n\nPara verificarte, tienes que soltar la URL de tu perfil de VRChat en el comando, ¿vale?",
     "verify.gotovrchat": "Ir a VRChat",
+    "modal.open": "Pon tu usuario o la URL",
+    "modal.title": "Verifica tu cuenta de VRChat, ¡venga!",
+    "modal.label": "Tu usuario o la URL de tu perfil de VRChat",
+    "modal.placeholder": "Suelta aquí tu nombre de usuario o la URL, colega",
+    "modal.empty": "¡Pero si no has puesto nada, chaval! Prueba otra vez, anda.",
     success: "¡Enhorabuena, crack! Tu cuenta está verificada. ¡A tope!",
     "success.age_verified":
       "\n\n¡Y ojo! Que tu edad en VRChat está verificada, así que te has llevao la **verificación +18** de regalo, sin comerlo ni beberlo. Verificado por {bot}, ¡olé!",
@@ -218,8 +248,34 @@ interface PendingCandidates {
 // Helpers
 // =========================================================================================================
 
-function verifyVideoAttachment(): AttachmentBuilder {
-  return new AttachmentBuilder(VERIFY_VIDEO_FILE, { name: VERIFY_VIDEO_NAME });
+/**
+ * Builds the button that opens the verification modal. Exported so the welcome panel can offer the same
+ * "type your username/URL" entry point under this command's prefix (routing the modal back here).
+ */
+export function buildOpenModalButton(label: string): ButtonBuilder {
+  return new ButtonBuilder()
+    .setCustomId(customId(BUTTON.OPEN_MODAL))
+    .setLabel(label)
+    .setStyle(ButtonStyle.Primary)
+    .setEmoji("📝");
+}
+
+/** Builds the modal that asks for a VRChat username or profile URL. */
+function buildVerifyModal(phrases: Phrases): ModalBuilder {
+  return new ModalBuilder()
+    .setCustomId(MODAL_ID)
+    .setTitle(phrases["modal.title"])
+    .addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId(MODAL.INPUT)
+          .setLabel(phrases["modal.label"])
+          .setPlaceholder(phrases["modal.placeholder"])
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(128),
+      ),
+    );
 }
 
 /** Builds the instructional video container shared by the profile button and howtoverify command. */
@@ -227,22 +283,11 @@ function buildVideoContainer(phrases: Phrases): {
   container: ContainerBuilder;
   file: AttachmentBuilder;
 } {
-  const file = verifyVideoAttachment();
-  const gotoButton = new ButtonBuilder()
-    .setStyle(ButtonStyle.Link)
-    .setURL(VRCHAT_URL)
-    .setEmoji("🔗")
-    .setLabel(phrases["verify.gotovrchat"]);
-
-  const container = new ContainerBuilder()
-    .setAccentColor(Colors.Aqua)
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(phrases["verify.description"]))
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems({ media: { url: `attachment://${VERIFY_VIDEO_NAME}` } }),
-    )
-    .addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(gotoButton));
-
-  return { container, file };
+  return buildVerifyVideo(
+    phrases["verify.description"],
+    phrases["verify.gotovrchat"],
+    buildOpenModalButton(phrases["modal.open"]),
+  );
 }
 
 function verifyButton(phrases: Phrases): ButtonBuilder {
@@ -527,6 +572,11 @@ async function onProfile(interaction: ButtonInteraction, phrases: Phrases): Prom
   });
 }
 
+/** Opens the modal so the user can type their VRChat username/URL without writing in the channel. */
+async function onOpenModal(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
+  await interaction.showModal(buildVerifyModal(phrases));
+}
+
 /** "It's my profile": the user confirmed the current candidate, so issue the bio code for it. */
 async function onConfirmProfile(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
   await interaction.deferUpdate();
@@ -599,14 +649,16 @@ const verificationData = new SlashCommandBuilder()
       .setRequired(false),
   );
 
-async function executeVerification(interaction: ChatInputCommandInteraction): Promise<void> {
-  await interaction.deferReply();
-
-  const phrases = localize(interaction.locale);
-  const userRequestData = {
-    discord_id: interaction.user.id,
-    discord_name: interaction.user.username,
-  };
+/**
+ * The shared "already verified?" gate. Edits the deferred reply with the unverify offer and returns true
+ * when the user already has a linked profile, so callers can stop. Used by both the slash command and the
+ * modal so neither path issues a duplicate verification.
+ */
+async function offerUnverifyIfLinked(
+  interaction: RepliableInteraction,
+  phrases: Phrases,
+): Promise<boolean> {
+  const userRequestData = { discord_id: interaction.user.id, discord_name: interaction.user.username };
 
   let profileData;
   try {
@@ -615,40 +667,63 @@ async function executeVerification(interaction: ChatInputCommandInteraction): Pr
     profileData = null;
   }
 
-  // Already verified: offer to unverify.
-  if (profileData) {
+  if (!profileData) {
+    return false;
+  }
+
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [
+      new ContainerBuilder()
+        .setAccentColor(Colors.Red)
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            `## ${phrases["embed.title"]}\n\n${phrases["unverify.description"]}`,
+          ),
+        )
+        .addActionRowComponents(
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            unverifyButton(phrases),
+            cancelButton(phrases),
+          ),
+        ),
+    ],
+  });
+  return true;
+}
+
+/**
+ * Resolves a free-form VRChat input (profile URL, bare id, or username) into the right next step and edits
+ * the already-deferred reply accordingly: a URL/id goes straight to the bio code; a username is searched
+ * and the user is asked to confirm which of up to a few candidates is theirs; nothing usable shows the
+ * instructional video. Shared by the slash command and the modal submit so both behave identically.
+ */
+async function resolveInputAndReply(
+  interaction: RepliableInteraction,
+  rawInput: string | null,
+  phrases: Phrases,
+): Promise<void> {
+  const trimmed = rawInput?.trim() ?? "";
+
+  // No input at all: show the instructional video (with the modal entry point) so the user can act.
+  if (!trimmed) {
+    const { container, file } = buildVideoContainer(phrases);
     await interaction.editReply({
       flags: MessageFlags.IsComponentsV2,
-      components: [
-        new ContainerBuilder()
-          .setAccentColor(Colors.Red)
-          .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(
-              `## ${phrases["embed.title"]}\n\n${phrases["unverify.description"]}`,
-            ),
-          )
-          .addActionRowComponents(
-            new ActionRowBuilder<ButtonBuilder>().addComponents(
-              unverifyButton(phrases),
-              cancelButton(phrases),
-            ),
-          ),
-      ],
+      components: [container],
+      files: [file],
     });
     return;
   }
 
-  // Resolve the VRChat id from either the profile URL or, in parallel, the supplied username.
-  const rawVrchat = interaction.options.getString("vrchat");
-  const rawUsername = interaction.options.getString("username");
+  // A URL or bare id resolves to a VRChat id directly; otherwise treat the input as a username to search.
+  const vrchatId = getVRChatId(trimmed);
 
-  const vrchatId = rawVrchat ? getVRChatId(rawVrchat) : null;
-
-  // A username was given (and no usable URL): names can collide, so instead of trusting the top hit we
-  // fetch up to a few candidates and let the user confirm which profile is theirs before issuing a code.
-  if (!vrchatId && rawUsername) {
+  // Username path: names can collide, so instead of trusting the top hit we fetch up to a few candidates
+  // and let the user confirm which profile is theirs before issuing a code.
+  if (!vrchatId) {
     const search = await VRCHAT_CLIENT.searchUsers({
-      query: { search: rawUsername, n: MAX_PROFILE_CANDIDATES },
+      query: { search: trimmed, n: MAX_PROFILE_CANDIDATES },
     });
     const results = search.data as unknown as VRChatUser[] | undefined;
     if (!results || results.length === 0) {
@@ -656,7 +731,7 @@ async function executeVerification(interaction: ChatInputCommandInteraction): Pr
         flags: MessageFlags.IsComponentsV2,
         components: [
           textContainer(
-            phrases["error.username_not_found"].replace("{name}", rawUsername),
+            phrases["error.username_not_found"].replace("{name}", trimmed),
             Colors.Red,
           ),
         ],
@@ -680,23 +755,30 @@ async function executeVerification(interaction: ChatInputCommandInteraction): Pr
     return;
   }
 
-  // No VRChat id supplied: show the instructional video.
-  if (!vrchatId) {
-    const { container, file } = buildVideoContainer(phrases);
-    await interaction.editReply({
-      flags: MessageFlags.IsComponentsV2,
-      components: [container],
-      files: [file],
-    });
-    return;
-  }
-
+  // URL/id path: confirmed VRChat id, issue the bio code straight away.
   pendingVerifications.set<PendingVerification>(interaction.user.id, { vrchat_id: vrchatId });
-
   await interaction.editReply({
     flags: MessageFlags.IsComponentsV2,
     components: [buildCodeContainer(vrchatId, phrases)],
   });
+}
+
+async function executeVerification(interaction: ChatInputCommandInteraction): Promise<void> {
+  await interaction.deferReply();
+
+  const phrases = localize(interaction.locale);
+
+  // Already verified: offer to unverify.
+  if (await offerUnverifyIfLinked(interaction, phrases)) {
+    return;
+  }
+
+  // Accept either option; a usable profile URL wins, otherwise fall back to the username.
+  const rawVrchat = interaction.options.getString("vrchat");
+  const rawUsername = interaction.options.getString("username");
+  const rawInput = (rawVrchat && getVRChatId(rawVrchat) ? rawVrchat : null) ?? rawUsername ?? rawVrchat;
+
+  await resolveInputAndReply(interaction, rawInput, phrases);
 }
 
 async function handleVerificationButton(interaction: ButtonInteraction): Promise<void> {
@@ -716,6 +798,9 @@ async function handleVerificationButton(interaction: ButtonInteraction): Promise
     case BUTTON.PROFILE:
       await onProfile(interaction, phrases);
       break;
+    case BUTTON.OPEN_MODAL:
+      await onOpenModal(interaction, phrases);
+      break;
     case BUTTON.CONFIRM_PROFILE:
       await onConfirmProfile(interaction, phrases);
       break;
@@ -727,10 +812,41 @@ async function handleVerificationButton(interaction: ButtonInteraction): Promise
   }
 }
 
+/**
+ * Handles the verification modal submit: reads the typed username/URL and runs the same resolution as the
+ * slash command (URL/id → bio code; username → candidate confirmation). Replies ephemerally so the result
+ * stays private to whoever opened the modal from the public welcome panel.
+ */
+async function handleVerificationModal(interaction: ModalSubmitInteraction): Promise<void> {
+  if (interaction.customId !== MODAL_ID) {
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const phrases = localize(interaction.locale);
+
+  // Already verified: offer to unverify instead of issuing a duplicate.
+  if (await offerUnverifyIfLinked(interaction, phrases)) {
+    return;
+  }
+
+  const rawInput = interaction.fields.getTextInputValue(MODAL.INPUT);
+  if (!rawInput.trim()) {
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["modal.empty"], Colors.Red)],
+    });
+    return;
+  }
+
+  await resolveInputAndReply(interaction, rawInput, phrases);
+}
+
 const verificationCommand: Command = {
   data: verificationData,
   execute: executeVerification,
   handleButton: handleVerificationButton,
+  handleModal: handleVerificationModal,
 };
 
 // =========================================================================================================

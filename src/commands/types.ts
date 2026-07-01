@@ -10,6 +10,7 @@ import type {
   AutocompleteInteraction,
   ButtonInteraction,
   ChatInputCommandInteraction,
+  ModalSubmitInteraction,
   SlashCommandBuilder,
   SlashCommandOptionsOnlyBuilder,
   SlashCommandSubcommandsOnlyBuilder,
@@ -37,4 +38,7 @@ export interface Command {
 
   /** Optional button handlers for this command's message components. */
   handleButton?(interaction: ButtonInteraction): Promise<void>;
+
+  /** Optional modal-submit handler for this command's modals (routed by the customId prefix). */
+  handleModal?(interaction: ModalSubmitInteraction): Promise<void>;
 }

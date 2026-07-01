@@ -104,6 +104,10 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
               <span class="sidebar__label" data-i18n="side.add">Agregar el bot</span>
             </a>
+            <a class="sidebar__link" href="#panel-bienvenida">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M9 10l2 2 4-4"/></svg>
+              <span class="sidebar__label" data-i18n="side.panel">Panel de bienvenida</span>
+            </a>
           </nav>
         </div>
 
@@ -144,6 +148,7 @@
           <p class="sidebar__title" data-i18n="side.admin">Administración del servidor</p>
           <nav class="sidebar__nav">
             <a class="sidebar__link" href="#cmd-settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span class="sidebar__label"><code>/settings</code></span></a>
+            <a class="sidebar__link" href="#cmd-welcomepanel"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M9 10l2 2 4-4"/></svg><span class="sidebar__label"><code>/welcomepanel</code></span></a>
             <a class="sidebar__link" href="#cmd-group"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span class="sidebar__label"><code>/group</code></span></a>
             <a class="sidebar__link" href="#cmd-linkgroup"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/></svg><span class="sidebar__label"><code>/linkgroup</code></span></a>
           </nav>
@@ -255,6 +260,20 @@
                 <em>Ajustes del servidor → Roles</em>.
               </p>
             </div>
+
+            <h3 id="panel-bienvenida" data-i18n="how.panel.title">Panel de bienvenida</h3>
+            <p data-i18n="how.panel.body">
+              Para que los recién llegados sepan qué hacer, el bot puede publicar un <strong>panel de
+              bienvenida</strong>: un mensaje fijo en un canal con un botón para iniciar la verificación.
+              Configura el canal con <code>/settings set channel</code> y publícalo con
+              <code>/welcomepanel send</code>, eligiendo el idioma del panel (Español o English) en la
+              opción <code>language</code>. Si activas el ping de bienvenida
+              (<code>/settings set toggle</code>), el bot mencionará a cada nuevo miembro en ese canal
+              para llevar su atención al panel, y borrará la mención unos segundos después. Al pulsar
+              <strong>Verificar</strong>, el miembro abre una ventana donde escribe su usuario o URL de
+              VRChat — sin necesidad de escribir nada en el chat, lo que permite a los dueños mantener
+              el canal cerrado.
+            </p>
           </section>
 
           <!-- ---------------------------------------------------------------------------------------- -->
@@ -454,13 +473,29 @@
               </div>
               <div class="cmd__body">
                 <p data-i18n="cmd.settings.desc">Configura el comportamiento del bot en tu servidor. Requiere el permiso <strong>Gestionar servidor</strong>.</p>
+                <p data-i18n="cmd.settings.set_intro">Los ajustes se cambian con <code>set</code>, agrupado por tipo de valor para conservar los selectores nativos de Discord:</p>
                 <ul class="cmd__opts">
-                  <li><code>verification-role</code><span data-i18n="cmd.settings.opt.role">Rol que se asigna a los usuarios verificados.</span></li>
-                  <li><code>verification-plus-role</code><span data-i18n="cmd.settings.opt.plus">Rol que se asigna a los usuarios verificados +18.</span></li>
-                  <li><code>auto-nickname</code><span data-i18n="cmd.settings.opt.nick">Activa o desactiva el cambio automático de apodo al nombre de VRChat.</span></li>
-                  <li><code>log-channel</code><span data-i18n="cmd.settings.opt.log">Canal donde el bot registra las acciones (invitaciones, expulsiones, etc.).</span></li>
+                  <li><code>set role</code><span data-i18n="cmd.settings.opt.set_role">Elige un ajuste de rol (rol de verificado o rol +18) y el rol a asignar.</span></li>
+                  <li><code>set channel</code><span data-i18n="cmd.settings.opt.set_channel">Elige un ajuste de canal (canal de log o canal del panel de bienvenida) y el canal.</span></li>
+                  <li><code>set toggle</code><span data-i18n="cmd.settings.opt.set_toggle">Activa o desactiva un ajuste (apodo automático o ping de bienvenida).</span></li>
                   <li><code>view</code><span data-i18n="cmd.settings.opt.view">Muestra la configuración actual del servidor.</span></li>
                   <li><code>reset</code><span data-i18n="cmd.settings.opt.reset">Restablece un ajuste concreto o todos a la vez.</span></li>
+                </ul>
+              </div>
+            </article>
+
+            <!-- /welcomepanel -->
+            <article class="cmd" id="cmd-welcomepanel">
+              <div class="cmd__head">
+                <span class="cmd__name">/welcomepanel</span>
+                <span class="cmd__perm cmd__perm--admin" data-i18n="perm.manage_server">Gestionar servidor</span>
+              </div>
+              <div class="cmd__body">
+                <p data-i18n="cmd.welcomepanel.desc">Publica y administra el panel de bienvenida: un mensaje fijo con un botón para que los recién llegados empiecen a verificarse. Configura primero el canal con <code>/settings set channel</code>. Requiere el permiso <strong>Gestionar servidor</strong>.</p>
+                <ul class="cmd__opts">
+                  <li><code>send [language]</code><span data-i18n="cmd.welcomepanel.opt.send">Publica el panel en el canal configurado y guarda su mensaje. Con <code>language</code> eliges el idioma del panel (Español o English); se guarda para que las actualizaciones usen el mismo.</span></li>
+                  <li><code>preview</code><span data-i18n="cmd.welcomepanel.opt.preview">Te muestra el panel en privado, sin publicarlo en el canal.</span></li>
+                  <li><code>refresh</code><span data-i18n="cmd.welcomepanel.opt.refresh">Actualiza el panel ya publicado; si fue borrado, lo vuelve a publicar.</span></li>
                 </ul>
               </div>
             </article>
@@ -541,6 +576,7 @@
                   <tr><td><code>/invite</code></td><td data-i18n="table.r.invite">Enlace para invitar el bot</td><td data-i18n="perm.all">Todos</td></tr>
                   <tr><td><code>/howitworks</code></td><td data-i18n="table.r.howitworks">Guía interactiva de 7 páginas</td><td data-i18n="perm.all">Todos</td></tr>
                   <tr><td><code>/settings</code></td><td data-i18n="table.r.settings">Configurar el bot en el servidor</td><td data-i18n="perm.manage_server">Gestionar servidor</td></tr>
+                  <tr><td><code>/welcomepanel</code></td><td data-i18n="table.r.welcomepanel">Publicar el panel de bienvenida</td><td data-i18n="perm.manage_server">Gestionar servidor</td></tr>
                   <tr><td><code>/group</code></td><td data-i18n="table.r.group">Invitar, expulsar y ver permisos del grupo</td><td data-i18n="perm.admin">Administrador</td></tr>
                   <tr><td><code>/linkgroup</code></td><td data-i18n="table.r.linkgroup">Vincular un grupo de VRChat</td><td data-i18n="perm.admin">Administrador</td></tr>
                   <tr><td><code>/staff</code></td><td data-i18n="table.r.staff">Gestión de usuarios y staff</td><td data-i18n="perm.staff">Staff</td></tr>
@@ -584,7 +620,7 @@
     </div>
 
     <!-- Translations + UI prefs (language, effects toggle) before the behaviour scripts. -->
-    <script src="js/i18n.js?v=1" defer></script>
+    <script src="js/i18n.js?v=4" defer></script>
     <!-- Third-party libs, then our glue code. -->
     <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>

@@ -13,6 +13,7 @@ import { Client, Collection, Events, GatewayIntentBits } from "discord.js";
 import { allCommands } from "./commands/index.js";
 import { env } from "./config/env.js";
 import { onGuildCreate } from "./events/guildCreate.js";
+import { onGuildMemberAdd } from "./events/guildMemberAdd.js";
 import { onInteractionCreate } from "./events/interactionCreate.js";
 import { onClientReady } from "./events/ready.js";
 import { D1Class } from "./services/d1.js";
@@ -51,6 +52,10 @@ client.on(Events.InteractionCreate, (interaction) => {
 
 client.on(Events.GuildCreate, (guild) => {
   void onGuildCreate(guild);
+});
+
+client.on(Events.GuildMemberAdd, (member) => {
+  void onGuildMemberAdd(member);
 });
 
 // =========================================================================================================

@@ -103,5 +103,25 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     } catch (error) {
       await reportError(interaction, error);
     }
+    return;
+  }
+
+  // Modal submit: like buttons, the owning command is the customId prefix before the first "_".
+  if (interaction.isModalSubmit()) {
+    const ownerName = interaction.customId.split("_")[0];
+    if (!ownerName) {
+      return;
+    }
+
+    const command: Command | undefined = client.commands.get(ownerName);
+    if (!command?.handleModal) {
+      return;
+    }
+
+    try {
+      await command.handleModal(interaction);
+    } catch (error) {
+      await reportError(interaction, error);
+    }
   }
 }

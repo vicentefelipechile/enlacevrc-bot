@@ -22,6 +22,7 @@ import { command as sync } from "./sync.js";
 import type { Command } from "./types.js";
 import { commands as verificationCommands } from "./verification.js";
 import { command as viewprofile } from "./viewprofile.js";
+import { command as welcomepanel } from "./welcomepanel.js";
 import { command as worldinfo } from "./worldinfo.js";
 
 // =========================================================================================================
@@ -40,6 +41,7 @@ export const allCommands: Command[] = [
   staff,
   sync,
   viewprofile,
+  welcomepanel,
   worldinfo,
   ...verificationCommands,
 ];
