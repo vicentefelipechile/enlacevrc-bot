@@ -32,8 +32,9 @@ import { createLocalizer } from "../lib/i18n.js";
 // Constants
 // =========================================================================================================
 
-// Button custom id: routed to the `welcomepanel` command's handleButton (prefix before the first `_`).
+// Button custom ids: routed to the `welcomepanel` command's handleButton (prefix before the first `_`).
 export const WELCOME_PANEL_BUTTON_ID = "welcomepanel_verify";
+export const WELCOME_PANEL_SYNC_BUTTON_ID = "welcomepanel_sync";
 
 // The panel is persistent and language-neutral toward the server, so it cannot use an interaction locale.
 // It is rendered from the guild's own `preferredLocale`: any Spanish variant uses neutral LATAM Spanish
@@ -45,8 +46,10 @@ const localize = createLocalizer({
       "New here? To unlock the server you need to **link your VRChat account**. It only takes a minute:\n\n" +
       "1. Press the **Verify** button below.\n" +
       "2. Follow the short instructions the bot sends you.\n\n" +
-      "Once you're verified you'll get access to the rest of the server.",
+      "Once you're verified you'll get access to the rest of the server.\n\n" +
+      "**Already verified in another server?** Just press **Sync** to get your roles here.",
     "panel.button": "Verify",
+    "panel.sync": "Sync",
     "panel.footer": "Only you can see what the button sends — nobody else in this channel will.",
   },
   [Locale.SpanishLATAM]: {
@@ -55,8 +58,10 @@ const localize = createLocalizer({
       "¿Recién llegas? Para desbloquear el servidor necesitas **vincular tu cuenta de VRChat**. Solo toma un minuto:\n\n" +
       "1. Presiona el botón **Verificar** de abajo.\n" +
       "2. Sigue las breves instrucciones que te enviará el bot.\n\n" +
-      "Una vez verificado tendrás acceso al resto del servidor.",
+      "Una vez verificado tendrás acceso al resto del servidor.\n\n" +
+      "**¿Ya te verificaste en otro servidor?** Solo presiona **Sincronizar** para obtener tus roles aquí.",
     "panel.button": "Verificar",
+    "panel.sync": "Sincronizar",
     "panel.footer": "Solo tú puedes ver lo que envía el botón — nadie más en este canal lo verá.",
   },
 });
@@ -138,6 +143,11 @@ export function buildWelcomePanel(guild: Guild, locale: Locale = guildPanelLocal
           .setLabel(phrases["panel.button"])
           .setStyle(ButtonStyle.Success)
           .setEmoji("✅"),
+        new ButtonBuilder()
+          .setCustomId(WELCOME_PANEL_SYNC_BUTTON_ID)
+          .setLabel(phrases["panel.sync"])
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji("🔄"),
       ),
     )
     .addSeparatorComponents(

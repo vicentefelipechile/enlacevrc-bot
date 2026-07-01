@@ -8,28 +8,19 @@
 // Imports
 // =========================================================================================================
 
-import {
-  Colors,
-  ContainerBuilder,
-  Locale,
-  MessageFlags,
-  PermissionsBitField,
-  SlashCommandBuilder,
-} from "discord.js";
-import type { ChatInputCommandInteraction, GuildMember, Role } from "discord.js";
+import { Colors, ContainerBuilder, Locale, MessageFlags, SlashCommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
 
 import type { Command } from "./types.js";
-import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
-import { D1Class } from "../services/d1.js";
+import { syncMember } from "../lib/sync-member.js";
+import type { SyncResult } from "../lib/sync-member.js";
 import { buildContainer, textContainer } from "../ui/container.js";
 
 
 // =========================================================================================================
 // Constants
 // =========================================================================================================
-
-const AUTO_NICKNAME_ENABLED = "1";
 
 const localize = createLocalizer({
   [Locale.EnglishUS]: {
@@ -97,55 +88,27 @@ const localize = createLocalizer({
 
 type Phrases = ReturnType<typeof localize>;
 
-interface SyncChanges {
-  rolesAdded: string[];
-  nicknameUpdated: boolean;
-  nickname: string | null;
-}
+/** The success-summary strings `buildSyncResultContainer` reads (the error strings come from `SyncResult`). */
+export type SyncResultPhrases = Pick<
+  Phrases,
+  | "success.title"
+  | "success.description"
+  | "success.roles_title"
+  | "success.nickname_title"
+  | "success.no_changes"
+>;
 
 // =========================================================================================================
-// Helpers
+// Localization
 // =========================================================================================================
-
-/** Builds a red error container from a title and description. */
-function errorContainer(title: string, description: string): ContainerBuilder {
-  return buildContainer({ color: Colors.Red, title, description });
-}
 
 /**
- * Attempts to grant a role to the member, respecting role hierarchy. Returns null on success or an
- * error container describing the failure (hierarchy issue or API error).
+ * Localizes the sync phrase table for a given locale. Exported so other entry points into the sync flow
+ * (the welcome panel's Sync button) reuse the exact same strings the `/sync` command uses, instead of
+ * maintaining a parallel copy.
  */
-async function grantRole(
-  member: GuildMember,
-  botMember: GuildMember,
-  role: Role,
-  changes: SyncChanges,
-  phrases: Phrases,
-  failKey: "log.role_fail" | "log.plus_role_fail",
-): Promise<ContainerBuilder | null> {
-  if (member.roles.cache.has(role.id)) {
-    return null;
-  }
-
-  if (botMember.roles.highest.position <= role.position) {
-    return errorContainer(
-      phrases["error.role_hierarchy"].replace("{role}", role.name),
-      phrases["solution.role_hierarchy"].replace("{role}", role.name),
-    );
-  }
-
-  try {
-    await member.roles.add(role);
-    changes.rolesAdded.push(role.toString());
-    return null;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return errorContainer(
-      phrases[failKey].replace("{role}", role.name).replace("{error}", message),
-      String(error),
-    );
-  }
+export function localizeSync(locale: Locale): Phrases {
+  return localize(locale);
 }
 
 // =========================================================================================================
@@ -160,122 +123,21 @@ const data = new SlashCommandBuilder()
     [Locale.SpanishES]: "Sincroniza tus roles y apodo con tu perfil de VRChat, ¡así de fácil!",
   });
 
-async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  await interaction.deferReply();
-
-  const phrases = localize(interaction.locale);
-
-  const replyText = (content: string, color: number = Colors.Red): Promise<unknown> =>
-    interaction.editReply({
-      flags: MessageFlags.IsComponentsV2,
-      components: [textContainer(content, color)],
+/**
+ * Renders a `SyncResult` into a Components V2 container: a red error card, or a green summary listing the
+ * roles/nickname that changed (or "already up to date"). Exported so the welcome panel's Sync button
+ * presents identical output to the `/sync` command.
+ */
+export function buildSyncResultContainer(result: SyncResult, phrases: SyncResultPhrases): ContainerBuilder {
+  if (!result.ok) {
+    return buildContainer({
+      color: Colors.Red,
+      title: result.error.title,
+      description: result.error.description,
     });
-
-  // Sync only makes sense inside a guild with a resolved member.
-  if (!interaction.guild || !(interaction.member instanceof Object)) {
-    await replyText(phrases["error.no_profile"]);
-    return;
   }
 
-  const userRequestData = {
-    discord_id: interaction.user.id,
-    discord_name: interaction.user.username,
-  };
-
-  let profileData;
-  try {
-    profileData = await D1Class.getProfile(userRequestData, interaction.user.id, true);
-  } catch {
-    profileData = null;
-  }
-
-  if (!profileData) {
-    await replyText(phrases["error.no_profile"]);
-    return;
-  }
-
-  if (profileData.is_banned) {
-    await replyText(phrases["error.banned"]);
-    return;
-  }
-
-  const guild = interaction.guild;
-  const settings = await D1Class.getAllDiscordSettings(userRequestData, guild.id);
-  const member = await guild.members.fetch(interaction.user.id);
-  const botMember = await guild.members.fetchMe();
-
-  if (!botMember.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
-    await interaction.editReply({
-      flags: MessageFlags.IsComponentsV2,
-      components: [errorContainer(phrases["error.bot_no_perm"], phrases["solution.bot_no_perm"])],
-    });
-    return;
-  }
-
-  const changes: SyncChanges = { rolesAdded: [], nicknameUpdated: false, nickname: null };
-
-  // 1. Basic verification role.
-  const verificationRoleId = settings[DISCORD_SERVER_SETTINGS.VERIFICATION_ROLE];
-  if (verificationRoleId) {
-    const role = guild.roles.cache.get(verificationRoleId);
-    if (role) {
-      const failure = await grantRole(member, botMember, role, changes, phrases, "log.role_fail");
-      if (failure) {
-        await interaction.editReply({
-          flags: MessageFlags.IsComponentsV2,
-          components: [failure],
-        });
-        return;
-      }
-    }
-  }
-
-  // 2. Auto nickname.
-  if (settings[DISCORD_SERVER_SETTINGS.AUTO_NICKNAME] === AUTO_NICKNAME_ENABLED) {
-    const newNickname = profileData.vrchat_name;
-    if (member.nickname !== newNickname && member.user.username !== newNickname) {
-      try {
-        if (botMember.roles.highest.position > member.roles.highest.position) {
-          await member.setNickname(newNickname);
-          changes.nicknameUpdated = true;
-          changes.nickname = newNickname;
-        }
-      } catch (error) {
-        await interaction.editReply({
-          flags: MessageFlags.IsComponentsV2,
-          components: [errorContainer(phrases["log.nickname_fail"], String(error))],
-        });
-        return;
-      }
-    }
-  }
-
-  // 3. Plus (18+) verification role.
-  if (profileData.is_verified) {
-    const plusRoleId = settings[DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE];
-    if (plusRoleId) {
-      const role = guild.roles.cache.get(plusRoleId);
-      if (role) {
-        const failure = await grantRole(
-          member,
-          botMember,
-          role,
-          changes,
-          phrases,
-          "log.plus_role_fail",
-        );
-        if (failure) {
-          await interaction.editReply({
-            flags: MessageFlags.IsComponentsV2,
-            components: [failure],
-          });
-          return;
-        }
-      }
-    }
-  }
-
-  // Build the success response.
+  const { changes } = result;
   const sections: string[] = [];
 
   if (changes.rolesAdded.length > 0) {
@@ -289,16 +151,37 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
     sections.push(`**${phrases["success.nickname_title"]}**\n${changes.nickname}`);
   }
 
-  const hasChanges = sections.length > 0;
-  const description = hasChanges
-    ? `${phrases["success.description"]}\n\n${sections.join("\n\n")}`
-    : phrases["success.no_changes"];
+  const description =
+    sections.length > 0
+      ? `${phrases["success.description"]}\n\n${sections.join("\n\n")}`
+      : phrases["success.no_changes"];
+
+  return buildContainer({ color: Colors.Green, title: phrases["success.title"], description });
+}
+
+async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
+  await interaction.deferReply();
+
+  const phrases = localize(interaction.locale);
+
+  // Sync only makes sense inside a guild with a resolved member.
+  if (!interaction.guild || !interaction.member) {
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.no_profile"], Colors.Red)],
+    });
+    return;
+  }
+
+  const guild = interaction.guild;
+  const requestData = { discord_id: interaction.user.id, discord_name: interaction.user.username };
+  const member = await guild.members.fetch(interaction.user.id);
+
+  const result = await syncMember(guild, member, requestData, phrases);
 
   await interaction.editReply({
     flags: MessageFlags.IsComponentsV2,
-    components: [
-      buildContainer({ color: Colors.Green, title: phrases["success.title"], description }),
-    ],
+    components: [buildSyncResultContainer(result, phrases)],
   });
 }
 

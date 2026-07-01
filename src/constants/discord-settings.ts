@@ -18,6 +18,7 @@ export const DISCORD_SERVER_SETTINGS = {
   WELCOME_PANEL_MESSAGE: "welcome_panel_message",
   WELCOME_PANEL_LANGUAGE: "welcome_panel_language",
   WELCOME_PING_ENABLED: "welcome_ping_enabled",
+  PROFILE_SEND_CHANNEL: "profile_send_channel",
 } as const;
 
 // The kind of input a setting accepts. Drives how `/settings set` groups its choices (each group keeps
@@ -36,6 +37,7 @@ export const SETTING_METADATA = [
   { key: DISCORD_SERVER_SETTINGS.VERIFICATION_PLUS_ROLE, type: SETTING_TYPE.ROLE },
   { key: DISCORD_SERVER_SETTINGS.LOG_CHANNEL, type: SETTING_TYPE.CHANNEL },
   { key: DISCORD_SERVER_SETTINGS.WELCOME_PANEL_CHANNEL, type: SETTING_TYPE.CHANNEL },
+  { key: DISCORD_SERVER_SETTINGS.PROFILE_SEND_CHANNEL, type: SETTING_TYPE.CHANNEL },
   { key: DISCORD_SERVER_SETTINGS.AUTO_NICKNAME, type: SETTING_TYPE.TOGGLE },
   { key: DISCORD_SERVER_SETTINGS.WELCOME_PING_ENABLED, type: SETTING_TYPE.TOGGLE },
 ] as const;

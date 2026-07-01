@@ -23,9 +23,11 @@ import type { ButtonInteraction, ChatInputCommandInteraction, Guild } from "disc
 import type { Command } from "./types.js";
 import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
+import { syncMember } from "../lib/sync-member.js";
 import { printMessage } from "../lib/logger.js";
 import { D1Class } from "../services/d1.js";
 import { buildOpenModalButton } from "./verification.js";
+import { buildSyncResultContainer, localizeSync } from "./sync.js";
 import { textContainer } from "../ui/container.js";
 import { buildVerifyVideo } from "../ui/verify-video.js";
 import {
@@ -52,9 +54,10 @@ const SUBCOMMAND = {
 // The `language` option on `send`, and its two allowed values (stored in `welcome_panel_language`).
 const LANGUAGE_OPTION = "language";
 
-// Component id after the `welcomepanel_` prefix (matches WELCOME_PANEL_BUTTON_ID in ui/welcome-panel).
+// Component ids after the `welcomepanel_` prefix (match WELCOME_PANEL_*_BUTTON_ID in ui/welcome-panel).
 const BUTTON = {
   VERIFY: "verify",
+  SYNC: "sync",
 } as const;
 
 const localize = createLocalizer({
@@ -304,6 +307,35 @@ async function onVerify(interaction: ButtonInteraction, phrases: Phrases): Promi
   });
 }
 
+/**
+ * The panel's Sync button: re-applies the presser's roles/nickname from their VRChat profile — the same
+ * flow as `/sync`, for members who verified in another server (verification is global) and just need their
+ * roles here. Replies ephemerally, using the sync command's own localized strings so the output matches.
+ */
+async function onSync(interaction: ButtonInteraction, phrases: Phrases): Promise<void> {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  if (!interaction.guild) {
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [textContainer(phrases["error.no_guild"], Colors.Red)],
+    });
+    return;
+  }
+
+  const guild = interaction.guild;
+  const syncPhrases = localizeSync(interaction.locale);
+  const requestData = { discord_id: interaction.user.id, discord_name: interaction.user.username };
+  const member = await guild.members.fetch(interaction.user.id);
+
+  const result = await syncMember(guild, member, requestData, syncPhrases);
+
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [buildSyncResultContainer(result, syncPhrases)],
+  });
+}
+
 // =========================================================================================================
 // Main
 // =========================================================================================================
@@ -396,6 +428,9 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
   switch (component) {
     case BUTTON.VERIFY:
       await onVerify(interaction, phrases);
+      break;
+    case BUTTON.SYNC:
+      await onSync(interaction, phrases);
       break;
     default:
       break;
