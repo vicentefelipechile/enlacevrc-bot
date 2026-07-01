@@ -1,5 +1,5 @@
 .claude/
-.zip
+*.zip
 
 # VRChat (session cookies + cached group dumps — regenerated at runtime)
 data.json

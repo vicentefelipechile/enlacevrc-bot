@@ -310,6 +310,21 @@ kbd {
   white-space: nowrap;
 }
 
+/* Leading sparkles icon — makes the control's purpose (visual effects) clear even
+   when the "Efectos" text label is hidden on small screens. */
+.fx-toggle__icon {
+  order: -1; /* render first, though it follows the input in the DOM (for the ~ selector) */
+  flex: none;
+  color: var(--color-text-faint);
+  transition: color 0.16s ease, filter 0.16s ease;
+}
+
+/* Lit when effects are on, dim when off (mirrors the switch state). */
+.fx-toggle input:checked ~ .fx-toggle__icon {
+  color: var(--color-accent-text);
+  filter: drop-shadow(0 0 5px rgba(180, 210, 255, 0.6));
+}
+
 /* Track. */
 .fx-toggle__switch {
   position: relative;
@@ -1118,7 +1133,8 @@ td code {
     padding: 0 14px;
   }
 
-  .fx-toggle span {
+  /* Hide only the text label, not the switch (which is also a span). */
+  .fx-toggle span:not(.fx-toggle__switch) {
     display: none;
   }
 

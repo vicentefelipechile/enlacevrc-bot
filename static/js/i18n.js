@@ -3,7 +3,7 @@
 // ========================================================================================================
 // Lightweight i18n with no dependencies. Spanish is the document's default (the HTML ships in Spanish), so
 // switching to ES means "restore the original". Each translatable node carries data-i18n / data-i18n-*; the
-// dictionaries below provide EN / PT / FR. Strings may contain inline markup (we author them, so they are
+// dictionaries below provide EN / PT / FR / JA. Strings may contain inline markup (we author them, so they are
 // trusted); those are applied with innerHTML, plain strings with textContent. Choice persists in
 // localStorage and defaults to the browser language. Also wires the "effects" toggle (exposed for
 // effects.js) and the language picker.
@@ -16,7 +16,7 @@
   // Constants
   // ------------------------------------------------------------------------------------------------------
 
-  const LANGS = ["es", "en", "pt", "fr"];
+  const LANGS = ["es", "en", "pt", "fr", "ja"];
   const LANG_KEY = "enlacevrc.lang";
   const FX_KEY = "enlacevrc.effects";
 
@@ -664,9 +664,169 @@
     "footer.source": "Code source",
   };
 
-  const DICTS = { es: ES, en: EN, pt: PT, fr: FR };
+  const JA = {
+    "a11y.skip": "コンテンツへスキップ",
+    "a11y.menu": "メニューを開く",
+    "nav.tag": "ドキュメント",
+    "nav.verification": "認証",
+    "nav.commands": "コマンド",
+    "ctrl.effects": "エフェクト",
+    "ctrl.effects_title": "アニメーションとエフェクトを切り替える",
+    "ctrl.language": "言語",
+    "side.search": "ガイド内を検索…",
+    "side.empty": "結果がありません。",
+    "side.start": "はじめに",
+    "side.what": "EnlaceVRCとは",
+    "side.how": "仕組み",
+    "side.add": "ボットを追加",
+    "side.panel": "ウェルカムパネル",
+    "side.verification": "認証",
+    "side.verify_account": "アカウントを認証する",
+    "side.verify_18": "+18認証",
+    "side.verify_global": "グローバル認証",
+    "side.user_cmds": "ユーザーコマンド",
+    "side.admin": "サーバー管理",
+    "side.staff": "スタッフ",
+    "side.reference": "リファレンス",
+    "side.table": "コマンド一覧",
+    "side.privacy": "プライバシーとデータ",
+    "hero.badge": "グローバル認証",
+    "hero.sub":
+      "VRChatアカウントを連携・認証するDiscordボットです。ユーザーはVRChatのバイオにコードを記載することでアカウントの所有を証明します — パスワードも第三者OAuthも不要です。",
+    "hero.cta_invite": "Discordに追加",
+    "hero.cta_verify": "認証の方法",
+    "hero.cta_commands": "すべてのコマンドを見る",
+    "how.eyebrow": "概要",
+    "how.title": "仕組み",
+    "how.lead":
+      "EnlaceVRCはあなたのVRChatのアイデンティティとDiscordアカウントを結び付け、サーバーからロール・ニックネーム・VRChatグループのメンバーシップを同期します。",
+    "how.f1.title": "バイオによる所有証明",
+    "how.f1.body":
+      "ボットが固有のコードを生成し、あなたはそれをVRChatのバイオに貼り付けます。ボットがそれを読み取り、アカウントが本当にあなたのものであることを確認します。VRChatのパスワードを求めることは決してありません。",
+    "how.f2.title": "グローバル認証",
+    "how.f2.body":
+      "一度認証すれば、その連携はこのボットを使う<strong>すべての</strong>サーバーで有効です。コミュニティごとに手続きを繰り返す必要はありません。",
+    "how.f3.title": "ロールとニックネームの自動付与",
+    "how.f3.body":
+      "認証すると、管理者の設定に応じて、サーバーは認証済みロールを付与したり、ニックネームをVRChatの名前に変更したりできます。",
+    "how.f4.title": "VRChatグループの管理",
+    "how.f4.body":
+      "管理者はDiscordから直接、連携済みVRChatグループのメンバーを招待・キックできます。アプリを離れる必要はありません。",
+    "how.add.title": "ボットをサーバーに追加する",
+    "how.add.body":
+      "すでにボットがいるサーバーで<code>/invite</code>コマンドを使って招待リンクを取得するか、管理者にリンクを尋ねてください。ボットには<strong>ロールの管理</strong>権限が必要で、ロールを付与するにはボットのロールが認証済みロールより上位にある必要があります。",
+    "how.add.note":
+      "ボットがロールを付与できない場合、ほとんどはサーバーのロール一覧でボットのロールが認証済みロールより下にあることが原因です。<em>サーバー設定 → ロール</em>でボットのロールを上へドラッグしてください。",
+    "how.panel.title": "ウェルカムパネル",
+    "how.panel.body":
+      "新規参加者が何をすべきか分かるように、ボットは<strong>ウェルカムパネル</strong>を投稿できます。これは認証を開始するボタン付きの固定メッセージです。<code>/settings set channel</code>でチャンネルを設定し、<code>/welcomepanel send</code>で投稿します。その際<code>language</code>オプションでパネルの言語(EspañolまたはEnglish)を選べます。ウェルカムpingを有効(<code>/settings set toggle</code>)にすると、ボットは新規メンバーをそのチャンネルでメンションしてパネルへ注意を促し、数秒後にそのメンションを削除します。<strong>認証</strong>を押すと、メンバーはVRChatのユーザー名またはURLを入力するウィンドウを開きます — チャットに何も書く必要がないため、オーナーはチャンネルを閉じたままにできます。",
+    "verify.eyebrow": "ステップバイステップガイド",
+    "verify.title": "アカウントを認証する",
+    "verify.lead":
+      "認証は数分で終わります。プロフィールのURL、ユーザー名から始めることも、何も入力せずチュートリアル動画を見ることもできます。",
+    "verify.s1.title": "<code>/verification</code>を実行する",
+    "verify.s1.body":
+      "<code>vrchat</code>オプションにプロフィールのURLを貼り付けるか、<code>username</code>に名前を入力します。名前を使うと、ボットは最大3件の候補プロフィールを表示するので、どれがあなたのものか確認できます。",
+    "verify.s2.title": "コードをコピーする",
+    "verify.s2.body": "ボットは使い捨ての認証コードを返します。そのままコピーしてください。",
+    "verify.s3.title": "VRChatのバイオに貼り付ける",
+    "verify.s3.body":
+      "VRChatでプロフィールを開き、バイオのどこかにコードを貼り付けます。メッセージ内の<em>VRChatを開く</em>ボタンでサイトを直接開けます。",
+    "verify.s4.title": "「認証」を押す",
+    "verify.s4.body":
+      "ボットがバイオを読み取り、コードを確認してアカウントを連携します。コードは<strong>5分</strong>で失効します。失効したらもう一度コマンドを実行してください。",
+    "verify.note":
+      "バイオにコードが表示されませんか?「認証」を押す前にVRChatで保存したか、まったく同じ文字列になっているかを確認してください。",
+    "verify.v18.title": "+18の自動認証",
+    "verify.v18.body":
+      "VRChatですでに年齢認証済み(<em>age verified</em>)の場合、連携時にボットが自動で<strong>+18認証</strong>を付与し、サーバーが設定していれば対応する+18ロールも付与します。別途の手続きは不要です。",
+    "verify.global.title": "「グローバル認証」の意味",
+    "verify.global.body":
+      "DiscordとVRChatの連携は一度だけ保存され、EnlaceVRCを実行するあらゆるサーバーで認識されます。ボットのある別のコミュニティに参加しても、すでに認証済みとして扱われます。連携を解除するには、もう一度<code>/verification</code>を実行し、<em>認証解除</em>ボタンを使います。",
+    "cmds.eyebrow": "リファレンス",
+    "cmds.title": "コマンド",
+    "cmds.lead":
+      "すべてのコマンドは英語とスペイン語(ラテンアメリカとスペイン)で利用できます。管理コマンドにはサーバーの権限が必要です。",
+    "perm.all": "全員",
+    "perm.manage_server": "サーバー管理",
+    "perm.admin": "管理者",
+    "perm.staff": "スタッフ",
+    "cmd.verification.desc": "DiscordアカウントをVRChatプロフィールに連携します。すでに認証済みなら連携を解除します。",
+    "cmd.verification.opt.vrchat": "VRChatプロフィールのURL。任意。",
+    "cmd.verification.opt.username": "URLの代わりに使うVRChatのユーザー名。任意。",
+    "cmd.howtoverify.desc": "VRChatアカウントをDiscordで認証する方法を説明する短いチュートリアル動画を表示します。",
+    "cmd.profile.desc": "連携済みの自分のVRChatプロフィールを表示します。",
+    "cmd.viewprofile.desc": "サーバーの他のユーザーのVRChatプロフィールを表示します。",
+    "cmd.viewprofile.opt.user": "プロフィールを見たいDiscordユーザー。",
+    "cmd.sync.desc": "VRChatプロフィールをもとに認証済みロールとニックネームを再適用します。ロールを失ったり名前を変えたりしたときに便利です。",
+    "cmd.worldinfo.desc": "VRChatのワールドをIDまたはURLで検索し、その情報を表示します。",
+    "cmd.worldinfo.opt.world": "VRChatワールドのIDまたはURL。",
+    "cmd.search.desc": "VRChatのページ送り検索。検索する種類を選び、ボタンでページを移動します。",
+    "cmd.search.opt.world": "名前でワールドを検索。",
+    "cmd.search.opt.avatar": "名前でアバターを検索。",
+    "cmd.search.opt.user": "名前でユーザーを検索。",
+    "cmd.invite.desc": "別のDiscordサーバーにボットを招待するためのリンク付きボタンを返します。",
+    "cmd.howitworks.desc": "ボットを段階的に紹介する7ページのインタラクティブガイド。ページ移動用のボタン付き。",
+    "cmd.settings.desc": "サーバーでのボットの動作を設定します。<strong>サーバー管理</strong>権限が必要です。",
+    "cmd.settings.set_intro": "設定は<code>set</code>で変更します。Discordのネイティブな選択メニューを保つため、値の種類ごとにグループ化されています:",
+    "cmd.settings.opt.set_role": "ロールの設定(認証済みロールまたは+18ロール)と付与するロールを選びます。",
+    "cmd.settings.opt.set_channel": "チャンネルの設定(ログチャンネルまたはウェルカムパネルのチャンネル)とチャンネルを選びます。",
+    "cmd.settings.opt.set_toggle": "設定(自動ニックネームまたはウェルカムping)を有効/無効にします。",
+    "cmd.settings.opt.view": "サーバーの現在の設定を表示します。",
+    "cmd.settings.opt.reset": "特定の設定、またはすべての設定をまとめてリセットします。",
+    "cmd.welcomepanel.desc": "ウェルカムパネルを投稿・管理します。新規参加者が認証を始めるためのボタン付き固定メッセージです。先に<code>/settings set channel</code>でチャンネルを設定してください。<strong>サーバー管理</strong>権限が必要です。",
+    "cmd.welcomepanel.opt.send": "設定済みチャンネルにパネルを投稿し、そのメッセージを保存します。<code>language</code>でパネルの言語(EspañolまたはEnglish)を選べます。以降の更新でも同じ言語が使われるよう保存されます。",
+    "cmd.welcomepanel.opt.preview": "チャンネルに投稿せず、パネルを非公開であなたに表示します。",
+    "cmd.welcomepanel.opt.refresh": "投稿済みのパネルを更新します。削除されていた場合は再投稿します。",
+    "cmd.group.desc": "サーバーに連携されたVRChatグループを管理します。グループのオプションはオートコンプリートされます。<strong>管理者</strong>権限が必要です。",
+    "cmd.group.opt.invite": "ユーザーをVRChatグループに招待します。",
+    "cmd.group.opt.kick": "ユーザーをVRChatグループからキックします。",
+    "cmd.group.opt.perms": "ボットがグループ内で持つ権限を表示します。",
+    "cmd.linkgroup.desc": "VRChatグループをDiscordサーバーに連携するための複数ステップのガイド付きフロー。ボタンで各ステップを進めます。",
+    "cmd.staff.desc": "ボットに登録されたスタッフ専用のアクション。分野ごとにグループ化されています。アクセス制御はルーターで一度だけ行われます。",
+    "cmd.staff.users": "ユーザー",
+    "cmd.staff.user.add": "DiscordユーザーをVRChat IDに手動で連携します。",
+    "cmd.staff.user.ban": "Discordユーザー単位でプロフィールをBANします(理由付き)。",
+    "cmd.staff.user.banid": "プロフィールIDでプロフィールをBANします(理由付き)。",
+    "cmd.staff.user.unban": "プロフィールのBANを解除します。",
+    "cmd.staff.user.verify": "他のユーザーの+18認証。",
+    "cmd.staff.members": "スタッフメンバー",
+    "cmd.staff.member.add": "新しいスタッフメンバーを登録します。",
+    "cmd.staff.member.remove": "スタッフメンバーを削除します。",
+    "cmd.staff.member.list": "登録済みのスタッフをすべて一覧表示します。",
+    "table.eyebrow": "概要",
+    "table.title": "コマンド一覧",
+    "table.lead": "各コマンドと、それを使える人の早見表。",
+    "table.h.cmd": "コマンド",
+    "table.h.use": "用途",
+    "table.h.access": "アクセス",
+    "table.r.verification": "VRChatアカウントを認証または連携解除",
+    "table.r.howtoverify": "認証のチュートリアル動画",
+    "table.r.profile": "自分のVRChatプロフィールを見る",
+    "table.r.viewprofile": "他のユーザーのプロフィールを見る",
+    "table.r.sync": "プロフィールからロールとニックネームを再適用",
+    "table.r.worldinfo": "VRChatワールドの情報",
+    "table.r.search": "ワールド・アバター・ユーザーを検索",
+    "table.r.invite": "ボットを招待するリンク",
+    "table.r.howitworks": "7ページのインタラクティブガイド",
+    "table.r.settings": "サーバーでのボット設定",
+    "table.r.welcomepanel": "ウェルカムパネルを投稿",
+    "table.r.group": "グループの招待・キック・権限確認",
+    "table.r.linkgroup": "VRChatグループを連携",
+    "table.r.staff": "ユーザーとスタッフの管理",
+    "priv.eyebrow": "透明性",
+    "priv.title": "プライバシーとデータ",
+    "priv.body1":
+      "EnlaceVRCはVRChatのパスワードを求めず、第三者OAuthも使いません。アカウントの所有はバイオ内の一時的なコードで証明され、認証が終わればすぐに削除できます。",
+    "priv.body2":
+      "あなたのDiscord IDとVRChat IDの連携は、グローバル認証を有効にするために保存されます。この連携は<code>/verification</code>の<em>認証解除</em>ボタンでいつでも削除できます。",
+    "footer.tagline": "EnlaceVRC · Discord向けVRChat認証ボット",
+    "footer.source": "ソースコード",
+  };
 
-  const LANG_NAMES = { es: "Español", en: "English", pt: "Português", fr: "Français" };
+  const DICTS = { es: ES, en: EN, pt: PT, fr: FR, ja: JA };
+
+  const LANG_NAMES = { es: "Español", en: "English", pt: "Português", fr: "Français", ja: "日本語" };
 
   // ------------------------------------------------------------------------------------------------------
   // Apply a language
@@ -698,7 +858,7 @@
     });
 
     document.documentElement.lang = lang;
-    const title = { es: "Documentación", en: "Documentation", pt: "Documentação", fr: "Documentation" }[lang];
+    const title = { es: "Documentación", en: "Documentation", pt: "Documentação", fr: "Documentation", ja: "ドキュメント" }[lang];
     document.title = "EnlaceVRC — " + title;
 
     // Let other scripts (e.g. AOS via effects.js) react to reflowed text.
