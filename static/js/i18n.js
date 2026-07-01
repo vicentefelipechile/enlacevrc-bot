@@ -901,6 +901,22 @@
           /* storage unavailable; selection still applies for this session */
         }
       });
+
+      // The native <select> sits in the sticky topbar. When it gains focus the
+      // browser runs its own "scroll focused element into view", which (a) fights
+      // Lenis's virtual scroll and (b) snaps against html's scroll-padding-top,
+      // yanking the page up a few dozen pixels every time the dropdown opens.
+      // We can't cancel that scroll, so we capture the position just before focus
+      // and restore it on the next frame — for both Lenis and the native scroller.
+      select.addEventListener("mousedown", () => {
+        const y = window.scrollY;
+        requestAnimationFrame(() => {
+          if (window.scrollY !== y) {
+            if (window.__lenis) window.__lenis.scrollTo(y, { immediate: true });
+            else window.scrollTo(0, y);
+          }
+        });
+      });
     }
 
     // Effects toggle: persist preference and expose it; effects.js reads window.__effectsEnabled.
