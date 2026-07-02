@@ -1,21 +1,26 @@
 // =========================================================================================================
 // Profile Message
 // =========================================================================================================
-// Fetches a Discord user's linked VRChat profile and builds the shared Components V2 container for it.
-// Used by non-interaction contexts (e.g. the member-join event) that need the same profile rendering as
-// `/viewprofile` but without a slash-command locale. The phrase table here is fixed to neutral Spanish
-// (LATAM), matching the project's default audience.
+// Fetches a Discord user's linked VRChat profile and builds the shared Components V2 container for it, and
+// posts it to a server's configured profile-send channel. Used by non-interaction and reply contexts (the
+// verification flow and the sync flow) that want the same profile rendering as `/viewprofile` but without a
+// slash-command locale. The phrase table here is fixed to neutral Spanish (LATAM), the project's default
+// audience.
 
 // =========================================================================================================
 // Imports
 // =========================================================================================================
 
-import type { ContainerBuilder } from "discord.js";
+import { MessageFlags } from "discord.js";
+import type { ContainerBuilder, Guild } from "discord.js";
 
+import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { D1Class } from "../services/d1.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
 import { formatProfileEmbed } from "./profile.js";
 import type { ProfileLocale, VRChatUser } from "./profile.js";
+import { resolvePanelChannel } from "./welcome-panel.js";
+import type { PanelChannelIssue } from "./welcome-panel.js";
 import type { UserRequestData } from "../types/models.js";
 
 // =========================================================================================================
@@ -32,8 +37,10 @@ const PROFILE_PHRASES: ProfileLocale = {
   "embed.verification_by": "Verificado por <@{discord_id}>",
   "embed.banned": "¡Baneado!",
   "embed.banned_by": "Baneado por <@{banned_by}>\nRazón: **{banned_reason}**\nBaneado el {banned_at}",
-  "embed.body":
-    "# [{profile_name}]({profile_url})\n\n## Biografía\n\n{profile_bio}\n\n**Estado**: {profile_status}\n**Pronombres**: {profile_wokestuff}",
+  "embed.nobio": "Sin biografía.",
+  "embed.header": "# [{profile_name}]({profile_url})",
+  "embed.bio_title": "### 📖 Biografía",
+  "embed.fields": "**Estado** ・ {profile_status}\n**Pronombres** ・ {profile_wokestuff}",
 };
 
 // =========================================================================================================
@@ -64,4 +71,48 @@ export async function buildProfileContainer(
   } catch {
     return null;
   }
+}
+
+/** Why posting the profile did not happen, so the caller can report actionable channel/permission issues. */
+export type ProfileSendResult =
+  | { sent: true }
+  | { sent: false; reason: "not_configured" | "no_profile" }
+  | { sent: false; reason: "channel"; issue: PanelChannelIssue };
+
+/**
+ * Posts a Discord user's VRChat profile to the guild's configured profile-send channel. Resolves the
+ * channel setting, builds the profile container and sends it, returning why it was skipped when it was
+ * (setting unset, user not verified, or a channel/permission problem) so the caller can log it. Never
+ * throws. Shared by the verification and sync flows so a member's profile is posted whenever they link or
+ * re-sync here, regardless of which entry point they used.
+ */
+export async function sendProfileToChannel(
+  guild: Guild,
+  requestData: UserRequestData,
+  discordId: string,
+  settings: Record<string, string>,
+): Promise<ProfileSendResult> {
+  const channelId = settings[DISCORD_SERVER_SETTINGS.PROFILE_SEND_CHANNEL];
+  if (!channelId || channelId === "0") {
+    return { sent: false, reason: "not_configured" };
+  }
+
+  const container = await buildProfileContainer(requestData, discordId);
+  if (!container) {
+    return { sent: false, reason: "no_profile" };
+  }
+
+  const check = await resolvePanelChannel(guild, channelId);
+  if (!check.ok) {
+    return { sent: false, reason: "channel", issue: check.issue };
+  }
+
+  await check.channel
+    .send({
+      components: [container],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications,
+    })
+    .catch(() => undefined);
+
+  return { sent: true };
 }

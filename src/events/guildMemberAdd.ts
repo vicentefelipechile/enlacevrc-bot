@@ -5,10 +5,10 @@
 // pings the member in that channel to pull their attention toward the static onboarding panel, then
 // deletes the ping shortly after so the channel doesn't fill up with mentions. While there, it self-heals
 // the panel: if the recorded panel message no longer exists, it re-publishes one and updates the config.
-// Separately, if a profile-send channel is configured and the joining member is already verified
-// (verification is global across servers), it posts that member's VRChat profile there so staff can see
-// exactly who joined, using the shared profile renderer. All failures (channel gone, permissions revoked)
-// are reported to the configured log channel, or to stdout as a last resort, and never crash the gateway.
+// (Posting a member's VRChat profile to the profile-send channel happens on verify/sync, not on join, so
+// it fires on the actual link/re-sync action rather than only when an already-verified member wanders in.)
+// All failures (channel gone, permissions revoked) are reported to the configured log channel, or to
+// stdout as a last resort, and never crash the gateway.
 
 // =========================================================================================================
 // Imports
@@ -20,7 +20,6 @@ import type { GuildMember, GuildTextBasedChannel } from "discord.js";
 import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { printMessage } from "../lib/logger.js";
 import { D1Class } from "../services/d1.js";
-import { buildProfileContainer } from "../ui/profile-message.js";
 import { publishWelcomePanel, resolvePanelChannel, resolvePanelLocale } from "../ui/welcome-panel.js";
 import type { UserRequestData } from "../types/models.js";
 
@@ -143,51 +142,13 @@ async function handleWelcomePanel(
   }
 }
 
-/**
- * Posts the joining member's VRChat profile to the configured profile-send channel when the member is
- * already verified (verification is global, so a member linked in another server has a profile here too).
- * Silently skips when the setting is unset or the member has no profile; channel/permission problems are
- * reported through `reportIssue`. Never throws.
- */
-async function sendProfile(
-  member: GuildMember,
-  settings: Record<string, string>,
-  requestData: UserRequestData,
-): Promise<void> {
-  const channelId = settings[DISCORD_SERVER_SETTINGS.PROFILE_SEND_CHANNEL];
-  if (!channelId || channelId === "0") {
-    return;
-  }
-
-  const container = await buildProfileContainer(requestData, member.id);
-  // Not verified anywhere (or VRChat lookup failed): nothing to post, and this is the common case for a
-  // brand-new member, so it is not an error worth reporting.
-  if (!container) {
-    return;
-  }
-
-  const check = await resolvePanelChannel(member.guild, channelId);
-  if (!check.ok) {
-    await reportIssue(member, settings, `cannot use the profile-send channel (${check.issue}).`);
-    return;
-  }
-
-  await check.channel
-    .send({
-      components: [container],
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications,
-    })
-    .catch(() => undefined);
-}
-
 // =========================================================================================================
 // Main
 // =========================================================================================================
 
 /**
- * Handles the GuildMemberAdd event: pings the new member toward the welcome panel (if enabled),
- * self-heals the panel, and posts the member's VRChat profile to the profile-send channel when verified.
- * Bots are ignored. Everything is wrapped so a failure can't crash the gateway.
+ * Handles the GuildMemberAdd event: pings the new member toward the welcome panel (if enabled) and
+ * self-heals the panel. Bots are ignored. Everything is wrapped so a failure can't crash the gateway.
  */
 export async function onGuildMemberAdd(member: GuildMember): Promise<void> {
   if (member.user.bot) {
@@ -207,7 +168,5 @@ export async function onGuildMemberAdd(member: GuildMember): Promise<void> {
     return;
   }
 
-  // The two features are independent settings, so run each regardless of whether the other is configured.
   await handleWelcomePanel(member, settings, requestData);
-  await sendProfile(member, settings, requestData);
 }

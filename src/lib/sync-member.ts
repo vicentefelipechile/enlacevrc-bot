@@ -15,6 +15,7 @@ import type { Guild, GuildMember, Role } from "discord.js";
 
 import { DISCORD_SERVER_SETTINGS } from "../constants/discord-settings.js";
 import { D1Class } from "../services/d1.js";
+import { sendProfileToChannel } from "../ui/profile-message.js";
 import type { UserRequestData } from "../types/models.js";
 
 // =========================================================================================================
@@ -40,7 +41,6 @@ export interface SyncPhrases {
   "solution.role_hierarchy": string;
   "log.role_fail": string;
   "log.plus_role_fail": string;
-  "log.nickname_fail": string;
 }
 
 /** A recoverable failure the caller renders as a localized error (title + optional solution/detail). */
@@ -153,22 +153,28 @@ export async function syncMember(
     }
   }
 
-  // 2. Auto nickname.
+  // 2. Auto nickname. Renaming a member requires the "Manage Nicknames" permission *and* a higher role;
+  // when either is missing Discord rejects `setNickname` with 50013, so we guard both and skip the nickname
+  // rather than failing the whole sync — the roles above are what matter, the nickname is a nice-to-have.
   if (settings[DISCORD_SERVER_SETTINGS.AUTO_NICKNAME] === AUTO_NICKNAME_ENABLED) {
     const newNickname = profileData.vrchat_name;
-    if (member.nickname !== newNickname && member.user.username !== newNickname) {
-      try {
-        if (botMember.roles.highest.position > member.roles.highest.position) {
-          await member.setNickname(newNickname);
+    const canManageNicknames = botMember.permissions.has(PermissionsBitField.Flags.ManageNicknames);
+    const outranksMember = botMember.roles.highest.position > member.roles.highest.position;
+    if (
+      canManageNicknames &&
+      outranksMember &&
+      member.nickname !== newNickname &&
+      member.user.username !== newNickname
+    ) {
+      // A nickname failure (e.g. Discord still rejecting with 50013 for a specific member) must never
+      // abort the sync — the roles above are what matter, so we swallow it and simply leave the nickname.
+      await member
+        .setNickname(newNickname)
+        .then(() => {
           changes.nicknameUpdated = true;
           changes.nickname = newNickname;
-        }
-      } catch (error) {
-        return {
-          ok: false,
-          error: { title: phrases["log.nickname_fail"], description: String(error) },
-        };
-      }
+        })
+        .catch(() => undefined);
     }
   }
 
@@ -192,6 +198,10 @@ export async function syncMember(
       }
     }
   }
+
+  // The member's linked profile is now (re-)synced here, so post it to the profile-send channel if one is
+  // configured. Failures are swallowed inside the helper; the sync result stands regardless.
+  await sendProfileToChannel(guild, requestData, member.id, settings);
 
   return { ok: true, changes };
 }

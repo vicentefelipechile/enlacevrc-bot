@@ -71,6 +71,14 @@ function formatDate(date: string | number | Date): string {
   });
 }
 
+/** Prefixes every line with `> ` so Discord renders the text as a single quoted block with a side bar. */
+function quoteBlock(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n");
+}
+
 /** Replaces any 16Personalities type code in the text with a markdown link to its page. */
 export function formatP16(description: string): string {
   let formatted = description;
@@ -117,10 +125,18 @@ export function formatProfileEmbed(
 
   const profileUrl = `${VRCHAT_PROFILE_BASE}${vrchatUser.id}`;
 
-  const textContent = (locale["embed.body"] ?? "")
+  // Header (name) is its own text block so a real separator can sit between it and the bio.
+  const headerContent = (locale["embed.header"] ?? "# {profile_name}")
     .replace("{profile_name}", displayName)
-    .replace("{profile_url}", profileUrl)
-    .replace("{profile_bio}", formattedBio)
+    .replace("{profile_url}", profileUrl);
+
+  // The bio section pairs a localized title with the user's free-form text, quoted so it reads as a
+  // distinct block (Discord renders `>` lines with a side bar) rather than blending into the fields.
+  const bioTitle = locale["embed.bio_title"] ?? "";
+  const quotedBio = quoteBlock(formattedBio.trim() || locale["embed.nobio"] || "…");
+  const bioContent = bioTitle ? `${bioTitle}\n${quotedBio}` : quotedBio;
+
+  const fieldsContent = (locale["embed.fields"] ?? "")
     .replace("{profile_status}", vrchatUser.status ?? locale["embed.nostatus"] ?? "")
     .replace("{profile_wokestuff}", vrchatUser.pronouns ?? locale["embed.nopronouns"] ?? "");
 
@@ -153,9 +169,22 @@ export function formatProfileEmbed(
     );
   }
 
+  const smallDivider = () =>
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
+
+  // Body is split into header / bio / fields, each its own text block with a real horizontal divider
+  // between them, so the sections read as distinct instead of one dense paragraph.
   const container = new ContainerBuilder()
     .setAccentColor(getRandomColor())
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(textContent));
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(headerContent))
+    .addSeparatorComponents(smallDivider())
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(bioContent));
+
+  if (fieldsContent) {
+    container
+      .addSeparatorComponents(smallDivider())
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(fieldsContent));
+  }
 
   // VRChat may return empty strings for these fields; only add the gallery with a real image URL,
   // since discord.js rejects an empty media URL.
@@ -167,9 +196,7 @@ export function formatProfileEmbed(
   }
 
   container
-    .addSeparatorComponents(
-      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
-    )
+    .addSeparatorComponents(smallDivider())
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(footerContent));
 
   if (profileData.is_banned) {

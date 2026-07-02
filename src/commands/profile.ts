@@ -48,8 +48,10 @@ const localize = createLocalizer({
     "embed.banned": "Banned!",
     "embed.banned_by":
       "Banned by <@{banned_by}>\nReason: **{banned_reason}**\nBanned at {banned_at}",
-    "embed.body":
-      "# [{profile_name}]({profile_url})\n\n## Biography\n\n{profile_bio}\n\n**Status**: {profile_status}\n**Pronouns**: {profile_wokestuff}",
+    "embed.nobio": "No biography.",
+    "embed.header": "# [{profile_name}]({profile_url})",
+    "embed.bio_title": "### 📖 Biography",
+    "embed.fields": "**Status** ・ {profile_status}\n**Pronouns** ・ {profile_wokestuff}",
   },
   [Locale.SpanishLATAM]: {
     "error.not_verified":
@@ -65,8 +67,10 @@ const localize = createLocalizer({
     "embed.banned": "¡Baneado!",
     "embed.banned_by":
       "Baneado por <@{banned_by}>\nRazón: **{banned_reason}**\nBaneado el {banned_at}",
-    "embed.body":
-      "# [{profile_name}]({profile_url})\n\n## Biografía\n\n{profile_bio}\n\n**Estado**: {profile_status}\n**Pronombres**: {profile_wokestuff}",
+    "embed.nobio": "Sin biografía.",
+    "embed.header": "# [{profile_name}]({profile_url})",
+    "embed.bio_title": "### 📖 Biografía",
+    "embed.fields": "**Estado** ・ {profile_status}\n**Pronombres** ・ {profile_wokestuff}",
   },
   [Locale.SpanishES]: {
     "error.not_verified":
@@ -82,8 +86,10 @@ const localize = createLocalizer({
     "embed.banned": "¡Baneado chaval!",
     "embed.banned_by":
       "Baneado por <@{banned_by}>\nRazón: **{banned_reason}**\nBaneado el {banned_at}",
-    "embed.body":
-      "# [{profile_name}]({profile_url})\n\n## La flipante vida del colega\n\n{profile_bio}\n\n**Estado**: {profile_status}\n**Pronombres**: {profile_wokestuff}",
+    "embed.nobio": "El colega no ha escrito ni una mísera línea.",
+    "embed.header": "# [{profile_name}]({profile_url})",
+    "embed.bio_title": "### 📖 La flipante vida del colega",
+    "embed.fields": "**Estado** ・ {profile_status}\n**Pronombres** ・ {profile_wokestuff}",
   },
 });
 

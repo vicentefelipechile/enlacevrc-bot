@@ -45,6 +45,7 @@ import { generateCodeByVRChat, getVRChatId } from "../lib/vrchat-code.js";
 import { D1Class } from "../services/d1.js";
 import { VRCHAT_CLIENT } from "../services/vrchat.js";
 import { textContainer } from "../ui/container.js";
+import { sendProfileToChannel } from "../ui/profile-message.js";
 import { buildVerifyVideo } from "../ui/verify-video.js";
 
 // =========================================================================================================
@@ -496,6 +497,10 @@ async function onVerify(interaction: ButtonInteraction, phrases: Phrases): Promi
         printMessage("Automatic age verification error:", String(error));
       }
     }
+
+    // The member just linked their profile here, so post it to the profile-send channel if one is set.
+    // Failures are swallowed inside the helper; a posting problem must not derail the success reply below.
+    await sendProfileToChannel(interaction.guild, userRequestData, discordId, settings);
   }
 
   const successMessage = ageVerifiedGranted
