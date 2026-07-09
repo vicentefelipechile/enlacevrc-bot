@@ -17,7 +17,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import type { ChatInputCommandInteraction, Guild } from "discord.js";
+import type { ChatInputCommandInteraction, Guild, GuildMember } from "discord.js";
 
 import type { Command } from "./types.js";
 import {
@@ -27,6 +27,7 @@ import {
 } from "../constants/discord-settings.js";
 import type { SettingType } from "../constants/discord-settings.js";
 import { createLocalizer } from "../lib/i18n.js";
+import { diagnoseSettings } from "../lib/settings-diagnostics.js";
 import { printMessage } from "../lib/logger.js";
 import { D1Class } from "../services/d1.js";
 import { buildContainer, textContainer } from "../ui/container.js";
@@ -97,6 +98,19 @@ const localize = createLocalizer({
     "view.not_set": "Not set",
     "view.enabled": "Enabled",
     "view.disabled": "Disabled",
+    "diag.title": "Diagnostics",
+    "diag.all_ok": "✅ Everything configured is working correctly.",
+    "diag.role_missing": "the configured role no longer exists.",
+    "diag.no_manage_roles": 'I lack the "Manage Roles" permission, so I can\'t assign this role.',
+    "diag.role_hierarchy": "my highest role is below {role}; move my role above it.",
+    "diag.channel_missing": "the configured channel no longer exists.",
+    "diag.channel_not_text": "the configured channel isn't a text channel.",
+    "diag.channel_no_view": "I can't view the configured channel.",
+    "diag.channel_no_send": "I can't send messages in the configured channel.",
+    "diag.no_manage_nicknames":
+      'I lack the "Manage Nicknames" permission, so nicknames won\'t update.',
+    "diag.ping_without_panel":
+      "the welcome ping is enabled but no Welcome Panel Channel is set, so it will never fire.",
   },
   [Locale.SpanishLATAM]: {
     "error.general":
@@ -113,6 +127,20 @@ const localize = createLocalizer({
     "view.not_set": "No establecido",
     "view.enabled": "Habilitado",
     "view.disabled": "Deshabilitado",
+    "diag.title": "Diagnóstico",
+    "diag.all_ok": "✅ Todo lo configurado está funcionando correctamente.",
+    "diag.role_missing": "el rol configurado ya no existe.",
+    "diag.no_manage_roles":
+      'No tengo el permiso "Gestionar Roles", así que no puedo asignar este rol.',
+    "diag.role_hierarchy": "mi rol más alto está por debajo de {role}; mueve mi rol por encima.",
+    "diag.channel_missing": "el canal configurado ya no existe.",
+    "diag.channel_not_text": "el canal configurado no es un canal de texto.",
+    "diag.channel_no_view": "no puedo ver el canal configurado.",
+    "diag.channel_no_send": "no puedo enviar mensajes en el canal configurado.",
+    "diag.no_manage_nicknames":
+      'No tengo el permiso "Gestionar Apodos", así que los apodos no se actualizarán.',
+    "diag.ping_without_panel":
+      "el ping de bienvenida está activado pero no hay Canal del Panel de Bienvenida configurado, así que nunca se activará.",
   },
   [Locale.SpanishES]: {
     "error.general":
@@ -129,6 +157,20 @@ const localize = createLocalizer({
     "view.not_set": "Ni puesto, macho",
     "view.enabled": "Activado",
     "view.disabled": "Desactivado",
+    "diag.title": "Diagnóstico, colega",
+    "diag.all_ok": "✅ ¡Todo niquelado! No hay nada roto por aquí.",
+    "diag.role_missing": "el rol que pusiste ya no existe, macho.",
+    "diag.no_manage_roles":
+      'No tengo el permiso de "Gestionar Roles", así que no puedo dar ese rol, chaval.',
+    "diag.role_hierarchy": "mi rol está por debajo de {role}; súbeme por encima o no llego.",
+    "diag.channel_missing": "el canal que pusiste ya no existe, tronco.",
+    "diag.channel_not_text": "ese canal no es de texto, ¿qué me cuentas?",
+    "diag.channel_no_view": "no veo el canal ese ni de coña.",
+    "diag.channel_no_send": "no puedo escribir en ese canal, colega.",
+    "diag.no_manage_nicknames":
+      'No tengo el permiso de "Gestionar Apodos", así que los apodos se quedan como están.',
+    "diag.ping_without_panel":
+      "el ping de bienvenida está activado pero no has puesto Canal del Panel, así que no hará nada de nada.",
   },
 });
 
@@ -167,6 +209,33 @@ function formatBoolean(value: string | undefined, phrases: Phrases): string {
     return phrases["view.disabled"];
   }
   return phrases["view.not_set"];
+}
+
+/**
+ * Renders the diagnostics section shown under the settings list in `/settings view`: one line per finding,
+ * prefixed with ❌ (error) or ⚠️ (warning) and the affected setting's label, or a single "all clear" line
+ * when nothing is wrong. Kept separate from `formatValue` because it summarizes live state, not stored values.
+ */
+function buildDiagnosticsSection(
+  guild: Guild,
+  botMember: GuildMember,
+  settings: Record<string, string>,
+  phrases: Phrases,
+): string {
+  const diagnostics = diagnoseSettings(guild, botMember, settings, phrases);
+
+  const header = `**${phrases["diag.title"]}**`;
+  if (diagnostics.length === 0) {
+    return `${header}\n${phrases["diag.all_ok"]}`;
+  }
+
+  const lines = diagnostics.map((d) => {
+    const icon = d.level === "error" ? "❌" : "⚠️";
+    const label = SETTING_LABELS[d.key] ?? d.key;
+    return `${icon} **${label}:** ${d.message}`;
+  });
+
+  return `${header}\n${lines.join("\n")}`;
 }
 
 /** Renders a single stored setting value according to its declared input type. */
@@ -341,7 +410,13 @@ async function execute(interaction: ChatInputCommandInteraction): Promise<void> 
           const label = SETTING_LABELS[m.key] ?? m.key;
           return `**${label}:** ${formatValue(m.type, settings[m.key], guild, phrases)}`;
         });
-        const description = `${phrases["view.description"]}\n\n${lines.join("\n")}`;
+
+        // Beyond the stored values, run a live check so config that can't actually work (role too low,
+        // channel unsendable, ping without a panel) is surfaced here instead of failing silently later.
+        const botMember = await guild.members.fetchMe();
+        const diagnostics = buildDiagnosticsSection(guild, botMember, settings, phrases);
+
+        const description = `${phrases["view.description"]}\n\n${lines.join("\n")}\n\n${diagnostics}`;
 
         await interaction.editReply({
           flags: MessageFlags.IsComponentsV2,

@@ -259,6 +259,16 @@ add a display label in `settings.ts`'s `SETTING_LABELS` — the three subcommand
 automatically.** Bot-managed bookkeeping (e.g. `welcome_panel_message`, which stores the published
 panel's message id) is deliberately left out of `SETTING_METADATA` so it never appears in the menus.
 
+`view` also renders a **Diagnostics** section under the stored values: `diagnoseSettings`
+(`src/lib/settings-diagnostics.ts`) runs a live pre-flight over every configured setting and reports
+what the bot *can't actually do* — a role the bot can't grant (missing `ManageRoles` or the bot's role
+sits below it), a channel it can't post in (gone / not text / no `ViewChannel` / no `SendMessages`),
+`auto_nickname` on without `ManageNicknames`, or `welcome_ping_enabled` on with no
+`welcome_panel_channel`. This surfaces the silent `50013`-class failures that otherwise only appear
+when a member joins or runs `/sync`. It mirrors the runtime pre-flights in `sync-member.ts` (roles) and
+`welcome-panel.ts`'s `resolvePanelChannel` (channels); it is pure inspection and never mutates anything.
+Diagnostic messages live in `settings.ts`'s `localize` table under the `diag.` key prefix.
+
 ### The welcome panel
 
 A persistent onboarding message a server posts in a text channel, with a Verify button that funnels
